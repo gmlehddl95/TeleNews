@@ -265,7 +265,12 @@ class TeleNewsBot:
         data = query.data
         
         if data == "removeall":
-            # 모두 삭제
+            # 모두 삭제 - 애니메이션 효과
+            # 1단계: 삭제 중 표시
+            await query.edit_message_text("🗑️ 모든 키워드를 삭제하는 중...")
+            await asyncio.sleep(0.4)  # 애니메이션 효과
+            
+            # 2단계: 실제 삭제
             deleted_count = self.db.remove_all_keywords(user_id)
             if deleted_count > 0:
                 await query.edit_message_text(f"✅ 모든 키워드가 제거되었습니다. (총 {deleted_count}개)")
@@ -274,8 +279,14 @@ class TeleNewsBot:
                 await query.edit_message_text("📝 제거할 키워드가 없습니다.")
         
         elif data.startswith("remove:"):
-            # 개별 키워드 삭제
+            # 개별 키워드 삭제 - 애니메이션 효과
             keyword = data.split(":", 1)[1]
+            
+            # 1단계: 삭제 중 표시
+            await query.edit_message_text(f"🗑️ '{keyword}' 삭제 중...")
+            await asyncio.sleep(0.4)  # 애니메이션 효과
+            
+            # 2단계: 실제 삭제
             if self.db.remove_keyword(user_id, keyword):
                 # 키워드 제거 후 남은 키워드 목록 다시 표시
                 keywords = self.db.get_keywords(user_id)

@@ -253,8 +253,7 @@ class StockMonitor:
 <b>TQQQ</b>
 • 현재가: ${tqqq_info['current_price']:.2f}
 
-<b>📉 나스닥 100 하락 시 (전고점 대비) TQQQ 예상가</b>
-<i>(20거래일 가정, 복리 계산)</i>
+<b>📉 나스닥 하락 시 (전고점 대비) TQQQ 예상가</b>
 • 10% 하락 시: ${scenarios[10]:.2f}
 • 15% 하락 시: ${scenarios[15]:.2f}
 • 20% 하락 시: ${scenarios[20]:.2f}

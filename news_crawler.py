@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote
 import time
 import re
+import html
 from datetime import datetime, timedelta
 from config import NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 from difflib import SequenceMatcher
@@ -141,9 +142,12 @@ class NaverNewsCrawler:
             # API 응답 파싱
             for item in data.get('items', []):
                 try:
-                    # HTML 태그 제거
+                    # HTML 태그 제거 및 엔티티 디코딩
                     title = BeautifulSoup(item.get('title', ''), 'html.parser').get_text()
+                    title = html.unescape(title)  # &middot; → ·, &hellip; → … 변환
+                    
                     description = BeautifulSoup(item.get('description', ''), 'html.parser').get_text()
+                    description = html.unescape(description)
                     link = item.get('link', item.get('originallink', ''))  # 네이버 뉴스 링크 우선
                     original_link = item.get('originallink', '')  # 언론사 정보 추출용
                     pub_date = item.get('pubDate', '')
@@ -155,6 +159,7 @@ class NaverNewsCrawler:
                     if title.endswith('...') or title.endswith('…'):
                         full_title = self._fetch_full_title(link)
                         if full_title:
+                            full_title = html.unescape(full_title)  # HTML 엔티티 디코딩
                             print(f"[DEBUG] 전체 제목 가져옴: {title} → {full_title}")
                             title = full_title
                     

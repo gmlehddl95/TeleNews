@@ -1,0 +1,63 @@
+TeleNews Bot 설정 가이드
+=========================
+
+1단계: Python 패키지 설치
+--------------------------
+명령 프롬프트(CMD) 또는 PowerShell에서 프로젝트 폴더로 이동 후:
+
+    pip install -r requirements.txt
+
+
+2단계: 텔레그램 봇 생성
+--------------------------
+1. 텔레그램 앱에서 @BotFather 검색
+2. /newbot 명령어 입력
+3. 봇 이름 입력 (예: My News Bot)
+4. 봇 사용자명 입력 (예: mynewsbot123_bot)
+5. 받은 토큰 복사 (예: 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz)
+
+
+3단계: Chat ID 확인
+--------------------------
+1. 텔레그램에서 @userinfobot 검색
+2. /start 명령어 입력
+3. Id 번호 복사 (예: 123456789)
+
+
+4단계: 환경변수 설정
+--------------------------
+프로젝트 폴더에 .env 파일을 생성하고 다음 내용 입력:
+
+TELEGRAM_BOT_TOKEN=여기에_봇_토큰_붙여넣기
+TELEGRAM_CHAT_ID=여기에_채팅_ID_붙여넣기
+
+예시:
+TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_CHAT_ID=123456789
+
+
+5단계: 봇 실행
+--------------------------
+    python bot.py
+
+
+6단계: 텔레그램에서 봇 사용
+--------------------------
+1. 텔레그램에서 생성한 봇 검색
+2. /start 명령어로 봇 시작
+3. /add 삼성전자 - 키워드 추가
+4. /list - 등록된 키워드 확인
+5. /stock - 주가 정보 확인
+
+
+문제 해결
+--------------------------
+Q: ModuleNotFoundError 오류가 발생합니다
+A: pip install -r requirements.txt 를 다시 실행하세요
+
+Q: 봇이 메시지를 보내지 않습니다
+A: .env 파일의 TELEGRAM_CHAT_ID가 정확한지 확인하세요
+
+Q: 뉴스가 수집되지 않습니다
+A: 인터넷 연결을 확인하고, 키워드가 올바르게 등록되었는지 확인하세요
+

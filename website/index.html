@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleNews Bot - 실시간 뉴스 알림 텔레그램 봇</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="gradient-text">TeleNews Bot</span>
+                </h1>
+                <p class="hero-subtitle">
+                    실시간 뉴스와 주가를 텔레그램으로 알려드립니다
+                </p>
+                <a href="https://t.me/MoEFNewsBot?start=welcome" class="cta-button" target="_blank">
+                    <svg class="telegram-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                    </svg>
+                    지금 시작하기
+                </a>
+            </div>
+        </div>
+        <div class="hero-bg"></div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">주요 기능</h2>
+            
+            <div class="features-grid">
+                <!-- Feature 1: News -->
+                <div class="feature-card">
+                    <div class="feature-icon news-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">실시간 뉴스 알림</h3>
+                    <p class="feature-description">
+                        관심 키워드를 등록하면 5분마다 자동으로 새로운 뉴스를 체크하여 알려드립니다.
+                    </p>
+                    <ul class="feature-list">
+                        <li>키워드 기반 맞춤 뉴스</li>
+                        <li>중복 뉴스 자동 필터링</li>
+                        <li>네이버 뉴스 API 연동</li>
+                        <li>제목이 잘린 뉴스는 전체 제목 크롤링</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 2: Stock -->
+                <div class="feature-card">
+                    <div class="feature-icon stock-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">주가 모니터링</h3>
+                    <p class="feature-description">
+                        나스닥 100(^NDX)과 TQQQ의 실시간 가격을 추적하고 급락 시 즉시 알려드립니다.
+                    </p>
+                    <ul class="feature-list">
+                        <li>나스닥 100 지수 전고점 대비 하락률 알림</li>
+                        <li>5%부터 1%p 단위로 하락 시 최초 1회 알림 (예: 5%, 6%, 7%...)</li>
+                        <li>2시간마다 자동 체크</li>
+                        <li>TQQQ 추가 하락 시나리오 제공</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 3: DND -->
+                <div class="feature-card">
+                    <div class="feature-icon dnd-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">방해금지 시간</h3>
+                    <p class="feature-description">
+                        원하는 시간대에는 알림을 받지 않도록 설정할 수 있습니다.
+                    </p>
+                    <ul class="feature-list">
+                        <li>버튼으로 간편하게 설정</li>
+                        <li>추천 시간대 제공</li>
+                        <li>수동 명령어는 언제나 사용 가능</li>
+                        <li>자동 알림만 일시 중지</li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">사용 방법</h2>
+            
+            <div class="steps-grid">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3 class="step-title">봇 시작하기</h3>
+                    <p class="step-description">
+                        텔레그램에서 <code>@MoEFNews</code>을 검색하고 <strong>/start</strong> 명령어를 입력하세요.
+                    </p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3 class="step-title">키워드 등록</h3>
+                    <p class="step-description">
+                        <strong>➕ 키워드 추가</strong> 버튼을 눌러 관심 있는 뉴스 키워드를 등록하세요.
+                    </p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3 class="step-title">알림 받기</h3>
+                    <p class="step-description">
+                        이제 자동으로 뉴스와 주가 정보를 받아보세요! <br> <strong>📰 뉴스 확인</strong>으로 즉시 확인도 가능합니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands Section -->
+    <section class="commands">
+        <div class="container">
+            <h2 class="section-title">명령어</h2>
+            
+            <div class="commands-grid">
+                <div class="command-group">
+                    <h3 class="command-group-title">📰 뉴스 관련</h3>
+                    <div class="command-item">
+                        <code>/add</code>
+                        <span>키워드 추가</span>
+                    </div>
+                    <div class="command-item">
+                        <code>/list</code>
+                        <span>키워드 목록</span>
+                    </div>
+                    <div class="command-item">
+                        <code>/news</code>
+                        <span>즉시 뉴스 확인</span>
+                    </div>
+                </div>
+
+                <div class="command-group">
+                    <h3 class="command-group-title">📊 주가 관련</h3>
+                    <div class="command-item">
+                        <code>/stock</code>
+                        <span>나스닥 100/TQQQ 정보</span>
+                    </div>
+                </div>
+
+                <div class="command-group">
+                    <h3 class="command-group-title">🔕 방해금지</h3>
+                    <div class="command-item">
+                        <code>/setquiet</code>
+                        <span>시간대 선택</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2 class="cta-title">지금 바로 시작하세요</h2>
+            <p class="cta-subtitle">
+                무료로 제공되는 TeleNews Bot으로<br>
+                중요한 뉴스와 주가 정보를 놓치지 마세요.
+            </p>
+            <a href="https://t.me/MoEFNewsBot?start=welcome" class="cta-button large" target="_blank">
+                <svg class="telegram-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                </svg>
+                텔레그램에서 시작하기
+            </a>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact" id="contact">
+        <div class="container">
+            <h2 class="section-title">문의하기</h2>
+            
+
+            <div class="contact-simple">
+                <div class="email-card">
+                    <div class="email-icon">📧</div>
+                    <h3>이메일 문의</h3>
+                    <button class="email-link" id="copyEmailBtn" data-email="gmlehddl95@gmail.com">
+                        gmlehddl95@gmail.com
+                    </button>
+                    <p class="email-note" id="emailNote">클릭하면 이메일 주소가 복사됩니다</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 TeleNews Bot. All rights reserved.</p>
+            <p class="footer-tech">
+                Built with Python · python-telegram-bot · BeautifulSoup · yfinance
+            </p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

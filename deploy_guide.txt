@@ -1,0 +1,76 @@
+========================================
+  TeleNews Bot 배포 가이드 (간단 버전)
+========================================
+
+📌 1. GitHub 저장소 만들기
+   → https://github.com → New repository
+   → 이름: TeleNews
+   → Public 선택
+   → Create repository
+
+📌 2. 코드 업로드 (PowerShell)
+   cd C:\Users\gmleh\Desktop\TeleNews
+   git init
+   git remote add origin https://github.com/your-username/TeleNews.git
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git push -u origin main
+
+📌 3. Render.com 배포
+   → https://render.com 가입
+   → New → Web Service
+   → GitHub 저장소 연결 (TeleNews)
+   → 설정:
+      Name: telenews-bot
+      Region: Singapore
+      Runtime: Python 3
+      Build: pip install -r requirements.txt
+      Start: python bot.py
+   
+   → Environment Variables 추가:
+      TELEGRAM_BOT_TOKEN = 여기에_봇_토큰
+      TELEGRAM_CHAT_ID = 여기에_채팅_ID
+      NAVER_CLIENT_ID = 여기에_네이버_ID
+      NAVER_CLIENT_SECRET = 여기에_네이버_시크릿
+   
+   → Create Web Service 클릭!
+
+📌 4. 웹사이트 배포
+   cd C:\Users\gmleh\Desktop\TeleNews\website
+   git init
+   git remote add origin https://github.com/your-username/telenews-website.git
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git push -u origin main
+
+   → GitHub 저장소 → Settings → Pages
+   → Branch: main, Folder: / (root)
+   → Save
+
+========================================
+  업데이트 방법
+========================================
+
+봇 업데이트:
+   git add .
+   git commit -m "수정 내용"
+   git push
+   → 자동으로 Render.com에서 재배포!
+
+웹사이트 업데이트:
+   cd website
+   git add .
+   git commit -m "수정 내용"
+   git push
+   → 1-2분 후 자동 반영!
+
+========================================
+  완료!
+========================================
+
+봇 주소: https://your-username.onrender.com
+웹사이트: https://your-username.github.io/telenews-website/
+
+문의: gmlehddl95@gmail.com

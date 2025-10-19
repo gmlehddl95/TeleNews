@@ -1,0 +1,490 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #111111;
+    --bg-card: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --accent-blue: #1e90ff;
+    --accent-blue-dark: #1570cd;
+    --accent-blue-light: #4da6ff;
+    --gradient-start: #1e90ff;
+    --gradient-end: #00bfff;
+    --border-color: #2a2a2a;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+    word-break: keep-all;
+    word-wrap: break-word;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Hero Section */
+.hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.hero-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(30, 144, 255, 0.1) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    animation: fadeInUp 1s ease-out;
+}
+
+.hero-title {
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-subtitle {
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    color: var(--text-secondary);
+    margin-bottom: 3rem;
+    font-weight: 300;
+}
+
+.cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2.5rem;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+    color: white;
+    text-decoration: none;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 30px rgba(30, 144, 255, 0.3);
+}
+
+.cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(30, 144, 255, 0.4);
+}
+
+.cta-button.large {
+    padding: 1.2rem 3rem;
+    font-size: 1.2rem;
+}
+
+.telegram-icon {
+    width: 24px;
+    height: 24px;
+}
+
+/* Section Styles */
+section {
+    padding: 100px 0;
+}
+
+.section-title {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    text-align: center;
+    margin-bottom: 4rem;
+    font-weight: 700;
+}
+
+/* Features Section */
+.features {
+    background-color: var(--bg-secondary);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    border-color: var(--accent-blue);
+    box-shadow: 0 20px 40px rgba(30, 144, 255, 0.2);
+}
+
+.feature-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.feature-icon svg {
+    width: 32px;
+    height: 32px;
+}
+
+.news-icon {
+    background: linear-gradient(135deg, #1e90ff, #00bfff);
+    color: white;
+}
+
+.stock-icon {
+    background: linear-gradient(135deg, #4169e1, #6495ed);
+    color: white;
+}
+
+.dnd-icon {
+    background: linear-gradient(135deg, #0066cc, #3399ff);
+    color: white;
+}
+
+.ui-icon {
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: white;
+}
+
+.feature-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.feature-description {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+}
+
+.feature-list {
+    list-style: none;
+}
+
+.feature-list li {
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.feature-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--accent-blue);
+    font-weight: bold;
+}
+
+/* How It Works Section */
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 3rem;
+}
+
+.step {
+    text-align: center;
+    position: relative;
+}
+
+.step-number {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 10px 30px rgba(30, 144, 255, 0.3);
+}
+
+.step-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.step-description {
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+.step-description code {
+    background: var(--bg-card);
+    padding: 0.2rem 0.5rem;
+    border-radius: 5px;
+    color: var(--accent-blue);
+    font-family: 'Courier New', monospace;
+}
+
+/* Commands Section */
+.commands {
+    background-color: var(--bg-secondary);
+}
+
+.commands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.command-group {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 2rem;
+}
+
+.command-group-title {
+    font-size: 1.3rem;
+    margin-bottom: 1.5rem;
+    color: var(--accent-blue);
+    font-weight: 600;
+}
+
+.command-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.command-item:hover {
+    background: var(--bg-primary);
+    transform: translateX(5px);
+}
+
+.command-item code {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    min-width: 100px;
+    text-align: center;
+}
+
+.command-item span {
+    color: var(--text-secondary);
+}
+
+/* CTA Section */
+.cta-section {
+    text-align: center;
+    background: linear-gradient(135deg, rgba(30, 144, 255, 0.1), rgba(0, 191, 255, 0.1));
+}
+
+.cta-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.cta-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 3rem;
+    line-height: 1.8;
+}
+
+/* Contact Section */
+.contact {
+    background-color: var(--bg-secondary);
+}
+
+.contact-simple {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.email-card {
+    background: var(--bg-card);
+    padding: 60px 40px;
+    border-radius: 30px;
+    border: 2px solid var(--border-color);
+    text-align: center;
+    transition: all 0.4s ease;
+}
+
+.email-card:hover {
+    transform: translateY(-10px);
+    border-color: var(--accent-blue);
+    box-shadow: 0 20px 60px rgba(30, 144, 255, 0.2);
+}
+
+.email-icon {
+    font-size: 5rem;
+    margin-bottom: 30px;
+    animation: float 3s ease-in-out infinite;
+}
+
+.email-card h3 {
+    font-size: 1.8rem;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+.email-link {
+    display: inline-block;
+    font-size: 1.4rem;
+    color: var(--accent-blue);
+    text-decoration: none;
+    padding: 16px 32px;
+    background: rgba(30, 144, 255, 0.1);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    border: 2px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.email-link:hover {
+    background: rgba(30, 144, 255, 0.2);
+    transform: scale(1.05);
+    border-color: var(--accent-blue);
+}
+
+.email-link:active {
+    transform: scale(0.98);
+}
+
+.email-link.copied {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
+.email-note {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-top: 10px;
+}
+
+/* Footer */
+.footer {
+    background-color: var(--bg-secondary);
+    text-align: center;
+    padding: 3rem 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.footer p {
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.footer-tech {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    section {
+        padding: 60px 0;
+    }
+
+    .hero {
+        min-height: 80vh;
+    }
+
+    .features-grid,
+    .steps-grid,
+    .commands-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .email-card {
+        padding: 40px 20px;
+    }
+
+    .email-link {
+        font-size: 1.1rem;
+        padding: 12px 24px;
+    }
+
+    .cta-button {
+        padding: 0.9rem 2rem;
+        font-size: 1rem;
+    }
+
+    .cta-button.large {
+        padding: 1rem 2.5rem;
+        font-size: 1.1rem;
+    }
+}
+
+/* Smooth Scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Selection */
+::selection {
+    background-color: var(--accent-blue);
+    color: white;
+}
+

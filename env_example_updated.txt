@@ -1,0 +1,12 @@
+# TeleNews Bot 환경변수 설정
+
+# 텔레그램 봇 설정
+TELEGRAM_BOT_TOKEN=여기에_봇_토큰_입력
+TELEGRAM_CHAT_ID=여기에_채팅ID_입력
+
+# 네이버 검색 API 설정 (필수!)
+# https://developers.naver.com/apps/#/register 에서 발급
+NAVER_CLIENT_ID=여기에_Client_ID_입력
+NAVER_CLIENT_SECRET=여기에_Client_Secret_입력
+
+

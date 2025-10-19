@@ -378,7 +378,21 @@ class TeleNewsBot:
             if data == "quiet:off":
                 # 방해금지 해제
                 if self.db.disable_quiet_hours(user_id):
-                    await query.edit_message_text("🔔 방해금지 시간이 해제되었습니다!")
+                    # 현재 상태 확인
+                    from datetime import datetime, timezone, timedelta
+                    kst = timezone(timedelta(hours=9))
+                    now = datetime.now(kst)
+                    current_time = now.strftime('%H:%M')
+                    
+                    await query.edit_message_text(
+                        f"🔔 방해금지 시간이 해제되었습니다!\n\n"
+                        f"📌 <b>현재 상태</b>\n"
+                        f"• 현재 시간: {current_time} (KST)\n"
+                        f"• 설정: 비활성화\n"
+                        f"• 상태: ✅ 알림 활성\n\n"
+                        f"💡 모든 자동 알림을 받습니다.",
+                        parse_mode='HTML'
+                    )
                     logger.info(f"사용자 {user_id} - 방해금지 시간 해제")
                     
                     # 대기 중인 주가 알림 확인 및 전송
@@ -387,7 +401,6 @@ class TeleNewsBot:
                         logger.info(f"사용자 {user_id} - 대기 중인 주가 알림 전송: {pending['alert_level']}% 하락")
                         # 나스닥 정보 재구성
                         nasdaq_info_dict = pending['nasdaq_info']
-                        from datetime import datetime
                         nasdaq_info_dict['ath_date'] = datetime.strptime(nasdaq_info_dict['ath_date'], '%Y-%m-%d')
                         
                         # 알림 전송
@@ -459,11 +472,24 @@ class TeleNewsBot:
                 end_time = f"{end_hour[:2]}:{end_hour[2:]}"        # "07:00"
                 
                 self.db.set_quiet_hours(user_id, start_time, end_time)
+                
+                # 현재 상태 확인
+                from datetime import datetime, timezone, timedelta
+                kst = timezone(timedelta(hours=9))
+                now = datetime.now(kst)
+                current_time = now.strftime('%H:%M')
+                is_currently_quiet = self.is_quiet_time(user_id)
+                current_status = "⚠️ 방해금지 시간" if is_currently_quiet else "✅ 알림 활성"
+                
                 await query.edit_message_text(
                     f"✅ 방해금지 시간이 설정되었습니다!\n\n"
-                    f"🔕 {start_time} ~ {end_time}\n\n"
-                    f"이 시간대에는 자동 알림이 전송되지 않습니다.\n"
-                    f"(수동 명령어는 사용 가능합니다)"
+                    f"📌 <b>현재 상태</b>\n"
+                    f"• 현재 시간: {current_time} (KST)\n"
+                    f"• 설정: {start_time} ~ {end_time} (🔕 활성화)\n"
+                    f"• 상태: {current_status}\n\n"
+                    f"💡 이 시간대에는 자동 알림이 전송되지 않습니다.\n"
+                    f"(수동 명령어는 사용 가능합니다)",
+                    parse_mode='HTML'
                 )
                 logger.info(f"사용자 {user_id} - 방해금지 시간 설정: {start_time} ~ {end_time}")
         

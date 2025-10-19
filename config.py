@@ -13,7 +13,7 @@ NAVER_CLIENT_ID = os.getenv('NAVER_CLIENT_ID', '')
 NAVER_CLIENT_SECRET = os.getenv('NAVER_CLIENT_SECRET', '')
 
 # 뉴스 검색 간격 (분)
-NEWS_CHECK_INTERVAL = int(os.getenv('NEWS_CHECK_INTERVAL', 30))
+NEWS_CHECK_INTERVAL = int(os.getenv('NEWS_CHECK_INTERVAL', 10))
 
 # 주가 알림 시간 (24시간 형식)
 STOCK_ALERT_TIMES = ['20:00', '22:00', '00:00']

@@ -487,6 +487,34 @@ class TeleNewsBot:
             import traceback
             logger.error(traceback.format_exc())
     
+    def _sort_news_by_date(self, news_list):
+        """뉴스를 날짜순으로 정렬 (최신 뉴스가 먼저)"""
+        try:
+            from datetime import datetime
+            
+            def parse_date(news):
+                """뉴스 날짜를 datetime 객체로 변환"""
+                try:
+                    date_str = news['date']
+                    # "Sat, 18 Oct 2025 10:40:00 +0900" 형식 파싱
+                    if '+' in date_str or '-' in date_str:
+                        # 시간대 정보가 있는 경우
+                        dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
+                    else:
+                        dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S')
+                    return dt
+                except:
+                    # 파싱 실패 시 현재 시간 반환 (맨 위에 배치)
+                    return datetime.now()
+            
+            # 날짜 기준 내림차순 정렬 (최신이 먼저)
+            sorted_news = sorted(news_list, key=parse_date, reverse=True)
+            return sorted_news
+        except Exception as e:
+            # 정렬 실패 시 원본 반환
+            logger.warning(f"뉴스 정렬 실패: {e}, 원본 순서 유지")
+            return news_list
+    
     async def _send_news_to_user(self, user_id, keyword, news_list):
         """특정 사용자에게 뉴스 전송 (키워드별 최적화용)"""
         # 방해금지 시간 체크
@@ -499,6 +527,10 @@ class TeleNewsBot:
         for news in news_list:
             if not self.db.is_news_sent(user_id, keyword, news['url']):
                 new_news.append(news)
+        
+        # 새 뉴스를 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
+        if new_news:
+            new_news = self._sort_news_by_date(new_news)
         
         # 새 뉴스가 있으면 전송
         if new_news:
@@ -569,6 +601,10 @@ class TeleNewsBot:
         for news in news_list:
             if not self.db.is_news_sent(user_id, keyword, news['url']):
                 new_news.append(news)
+        
+        # 새 뉴스를 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
+        if new_news:
+            new_news = self._sort_news_by_date(new_news)
         
         # 새 뉴스가 있으면 하나의 메시지로 전송
         if new_news:

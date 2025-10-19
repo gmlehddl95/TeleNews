@@ -1,0 +1,20 @@
+services:
+  - type: worker
+    name: telenews-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: NAVER_CLIENT_ID
+        sync: false
+      - key: NAVER_CLIENT_SECRET
+        sync: false
+      - key: NEWS_CHECK_INTERVAL
+        value: 30
+      - key: PYTHON_VERSION
+        value: 3.11.0
+

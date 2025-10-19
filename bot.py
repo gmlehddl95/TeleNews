@@ -494,15 +494,34 @@ class TeleNewsBot:
             )
             return
         
-        await update.message.reply_text("🔍 뉴스를 확인하고 있습니다...")
+        # 로딩 메시지 전송 및 저장
+        loading_msg = await update.message.reply_text("🔍 뉴스를 확인하고 있습니다...")
+        
+        # 뉴스 확인
         await self.check_news_for_user(user_id, manual_check=True)
+        
+        # 로딩 메시지 삭제
+        try:
+            await loading_msg.delete()
+        except:
+            pass  # 이미 삭제되었거나 삭제 권한이 없는 경우 무시
     
     async def stock_info_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """주가 정보 확인"""
-        await update.message.reply_text("📊 주가 정보를 가져오는 중...")
+        # 로딩 메시지 전송 및 저장
+        loading_msg = await update.message.reply_text("📊 주가 정보를 가져오는 중...")
+        
         # 동기 함수를 별도 스레드에서 실행
         report = await asyncio.to_thread(self.stock_monitor.get_full_report_html)
+        
+        # 결과 전송
         await update.message.reply_text(report, parse_mode='HTML')
+        
+        # 로딩 메시지 삭제
+        try:
+            await loading_msg.delete()
+        except:
+            pass  # 이미 삭제되었거나 삭제 권한이 없는 경우 무시
     
     async def check_news_updates(self):
         """뉴스 업데이트 확인 (스케줄러용 - 사용자별로 전체 키워드 뉴스 필터링)"""

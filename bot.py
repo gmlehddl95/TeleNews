@@ -731,8 +731,11 @@ class TeleNewsBot:
         
         # 새 뉴스가 있으면 하나의 메시지로 전송
         if new_news:
+            # 총 관련 기사 수 계산
+            total_similar = sum(news.get('similar_count', 1) for news in new_news)
+            
             message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
-            message += f"총 {len(new_news)}개\n"
+            message += f"총 {len(new_news)}개 (관련 기사 총 {total_similar}건)\n"
             message += "━━━━━━━━━━━━━━━━━━━━\n\n"
             
             for i, news in enumerate(new_news, 1):
@@ -740,11 +743,21 @@ class TeleNewsBot:
                 source = news['source']
                 date = self._format_date_simple(news['date'])
                 url = news['url']
+                similar_count = news.get('similar_count', 1)
                 
-                # 제목을 크고 강조
-                message += f"<a href='{url}'><b>🔹 {title}</b></a>\n\n"
+                # 뉴스 아이콘 결정
+                icon = self._get_news_icon(news)
                 
-                # 부가 정보는 작고 덜 눈에 띄게 (코드 블록 스타일)
+                # 제목 (아이콘 + 제목)
+                message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+                
+                # 관련뉴스 개수 표시 (1건은 표시 안함)
+                if similar_count > 1 or icon == '⭐':
+                    message += f" [관련뉴스: {similar_count}건]"
+                
+                message += "\n\n"
+                
+                # 부가 정보는 작고 덜 눈에 띄게
                 message += f"<code>{source}, {date}</code>\n"
                 message += "────────────────────\n\n"
             

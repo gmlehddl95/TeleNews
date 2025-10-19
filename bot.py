@@ -510,8 +510,10 @@ class TeleNewsBot:
             for i, news in enumerate(new_news, 1):
                 title = news['title']
                 source = news['source']
-                date = self._format_date_simple(news['date'])
                 url = news['url']
+                
+                # 날짜 포맷 (20분 이상 된 뉴스는 크롤링으로 수정 시간 확인)
+                date = self._format_date_with_crawl(news['date'], url)
                 
                 # 제목을 크고 강조
                 message += f"<a href='{url}'><b>🔹 {title}</b></a>\n\n"
@@ -611,8 +613,10 @@ class TeleNewsBot:
             for i, news in enumerate(news_list, 1):
                 title = news['title']
                 source = news['source']
-                date = self._format_date_simple(news['date'])
                 url = news['url']
+                
+                # 날짜 포맷 (20분 이상 된 뉴스는 크롤링으로 수정 시간 확인)
+                date = self._format_date_with_crawl(news['date'], url)
                 
                 # 제목을 크고 강조
                 message += f"<a href='{url}'><b>🔹 {title}</b></a>\n\n"
@@ -624,6 +628,61 @@ class TeleNewsBot:
             # 메시지 전송 (DB에는 기록하지 않음 - 이미 기록되어 있음)
             await self.send_message_to_user(user_id, message)
             logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 수동 확인, 기존 뉴스 {len(news_list)}개 표시")
+    
+    def _format_date_with_crawl(self, date_str, url):
+        """날짜 포맷 변환 (20분 이상 된 뉴스는 크롤링으로 수정 시간 확인)"""
+        try:
+            from datetime import datetime, timezone, timedelta
+            
+            # "Sat, 18 Oct 2025 10:40:00 +0900" 형식 파싱
+            if '+' in date_str:
+                parts = date_str.rsplit('+', 1)
+                dt_str = parts[0].strip()
+                tz_str = parts[1].strip()
+                tz_hours = int(tz_str[:2])
+                tz_minutes = int(tz_str[2:]) if len(tz_str) > 2 else 0
+                tz = timezone(timedelta(hours=tz_hours, minutes=tz_minutes))
+                dt = datetime.strptime(dt_str, "%a, %d %b %Y %H:%M:%S")
+                dt = dt.replace(tzinfo=tz)
+            else:
+                dt = datetime.strptime(date_str, "%a, %d %b %Y %H:%M:%S")
+                dt = dt.replace(tzinfo=timezone(timedelta(hours=9)))
+            
+            # 현재 시간 (KST)
+            now = datetime.now(timezone(timedelta(hours=9)))
+            
+            # 시간 차이 계산
+            diff = now - dt
+            minutes_ago = int(diff.total_seconds() / 60)
+            
+            # 요일 한글 변환
+            weekday_kr = ['월', '화', '수', '목', '금', '토', '일']
+            weekday = weekday_kr[dt.weekday()]
+            
+            # 20분 이상 된 뉴스는 크롤링으로 수정 시간 확인
+            if minutes_ago >= 20:
+                modified_time_str = self.news_crawler.fetch_modified_time(url)
+                if modified_time_str:
+                    # 수정 시간이 있으면 간단히 표시
+                    return f"{dt.month}.{dt.day}({weekday}) {dt.strftime('%H:%M')} (수정: {modified_time_str})"
+            
+            # 20분 이내 뉴스는 기존대로 "몇 분 전" 표시
+            if minutes_ago < 1:
+                time_ago = "방금"
+            elif minutes_ago < 60:
+                time_ago = f"{minutes_ago}분전"
+            elif minutes_ago < 1440:
+                hours_ago = minutes_ago // 60
+                time_ago = f"{hours_ago}시간전"
+            else:
+                days_ago = minutes_ago // 1440
+                time_ago = f"{days_ago}일전"
+            
+            return f"{dt.month}.{dt.day}({weekday}) {dt.strftime('%H:%M')}({time_ago})"
+            
+        except Exception as e:
+            # 파싱 실패 시 원본 반환
+            return date_str.split('+')[0].strip() if '+' in date_str else date_str
     
     def _format_date_simple(self, date_str):
         """날짜 포맷 변환 (간소화 + 몇 분 전)"""

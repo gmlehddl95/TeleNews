@@ -13,6 +13,40 @@ class NaverNewsCrawler:
         self.client_secret = NAVER_CLIENT_SECRET
         self.api_url = "https://openapi.naver.com/v1/search/news.json"
     
+    def fetch_modified_time(self, url):
+        """뉴스 링크에서 수정 시간 가져오기 (네이버 뉴스만)"""
+        try:
+            if 'news.naver.com' not in url:
+                return None
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=5)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # 수정 시간 찾기
+            # <em class="media_end_head_info_datestamp_time">2025.10.19. 오후 7:05</em>
+            # 또는 <span class="media_end_head_info_datestamp_time">
+            modified_tag = (
+                soup.find('em', class_='media_end_head_info_datestamp_time') or
+                soup.find('span', class_='media_end_head_info_datestamp_time')
+            )
+            
+            if modified_tag:
+                modified_text = modified_tag.get_text().strip()
+                # "2025.10.19. 오후 7:05" 형식을 RFC 2822 형식으로 변환
+                # 간단하게 텍스트 그대로 반환
+                return modified_text
+            
+            return None
+            
+        except Exception as e:
+            # 크롤링 실패 시 조용히 None 반환
+            return None
+    
     def _fetch_full_title(self, url):
         """뉴스 링크에서 전체 제목 가져오기"""
         try:

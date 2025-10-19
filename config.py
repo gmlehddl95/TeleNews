@@ -13,11 +13,11 @@ NAVER_CLIENT_ID = os.getenv('NAVER_CLIENT_ID', '')
 NAVER_CLIENT_SECRET = os.getenv('NAVER_CLIENT_SECRET', '')
 
 # 뉴스 검색 간격 (분)
-NEWS_CHECK_INTERVAL = 5
+NEWS_CHECK_INTERVAL = int(os.getenv('NEWS_CHECK_INTERVAL', 30))
 
 # 주가 알림 시간 (24시간 형식)
 STOCK_ALERT_TIMES = ['20:00', '22:00', '00:00']
 
-# 데이터베이스 파일
-DB_FILE = 'keywords.db'
+# 데이터베이스 URL (PostgreSQL - 환경 변수에서 가져옴)
+DATABASE_URL = os.getenv('DATABASE_URL', '')
 

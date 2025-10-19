@@ -504,6 +504,7 @@ class TeleNewsBot:
         if new_news:
             message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
             message += f"총 {len(new_news)}개\n"
+            message += f"<i>💡 네이버에 방금 등록된 뉴스입니다</i>\n"
             message += "━━━━━━━━━━━━━━━━━━━━\n\n"
             
             for i, news in enumerate(new_news, 1):

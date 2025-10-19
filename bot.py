@@ -137,6 +137,10 @@ class TeleNewsBot:
             else:
                 keywords = [input_text.strip()]
             
+            # 로딩 메시지 표시
+            loading_msg = await self.safe_reply(update.message, f"➕ 키워드를 추가하는 중...")
+            await asyncio.sleep(0.4)  # 애니메이션 효과
+            
             added = []
             already_exist = []
             
@@ -165,7 +169,12 @@ class TeleNewsBot:
                     message += f"⚠️ {len(already_exist)}개 이미 등록됨:\n"
                     message += ", ".join(already_exist)
             
-            await self.safe_reply(update.message, message if message else "❌ 추가할 키워드가 없습니다.")
+            # 로딩 메시지 수정
+            if loading_msg:
+                try:
+                    await loading_msg.edit_text(message if message else "❌ 추가할 키워드가 없습니다.")
+                except:
+                    await self.safe_reply(update.message, message if message else "❌ 추가할 키워드가 없습니다.")
         else:
             # 인자가 없으면 대화형 모드 시작
             self.waiting_for_keyword[user_id] = 'add'
@@ -450,6 +459,10 @@ class TeleNewsBot:
                 else:
                     keywords = [input_text]
                 
+                # 로딩 메시지 표시
+                loading_msg = await update.message.reply_text(f"➕ 키워드를 추가하는 중...")
+                await asyncio.sleep(0.4)  # 애니메이션 효과
+                
                 added = []
                 already_exist = []
                 
@@ -478,7 +491,11 @@ class TeleNewsBot:
                         message += f"⚠️ {len(already_exist)}개 이미 등록됨:\n"
                         message += ", ".join(already_exist)
                 
-                await update.message.reply_text(message if message else "❌ 추가할 키워드가 없습니다.")
+                # 로딩 메시지 수정
+                try:
+                    await loading_msg.edit_text(message if message else "❌ 추가할 키워드가 없습니다.")
+                except:
+                    await update.message.reply_text(message if message else "❌ 추가할 키워드가 없습니다.")
     
     async def check_news_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """수동으로 뉴스 확인"""

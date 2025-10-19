@@ -432,7 +432,7 @@ class TeleNewsBot:
         await update.message.reply_text(report, parse_mode='HTML')
     
     async def check_news_updates(self):
-        """뉴스 업데이트 확인 (스케줄러용 - 모든 사용자)"""
+        """뉴스 업데이트 확인 (스케줄러용 - 모든 사용자, 키워드별 최적화)"""
         try:
             logger.info("=== 뉴스 업데이트 체크 시작 ===")
             
@@ -445,31 +445,90 @@ class TeleNewsBot:
                 logger.info("등록된 키워드가 없습니다.")
                 return
             
-            # user_id별로 그룹화
+            # 키워드별로 그룹화 (최적화!) ⭐
             from collections import defaultdict
-            users_keywords = defaultdict(list)
+            keyword_users = defaultdict(list)  # {keyword: [user_id1, user_id2, ...]}
             for user_id, keyword in user_keywords:
-                users_keywords[user_id].append(keyword)
+                keyword_users[keyword].append(user_id)
             
-            logger.info(f"{len(users_keywords)}명의 사용자, 총 {len(user_keywords)}개 키워드 확인")
+            logger.info(f"중복 제거: 총 {len(user_keywords)}개 → {len(keyword_users)}개 고유 키워드")
+            logger.info(f"{len(set(uid for uid, _ in user_keywords))}명의 사용자")
             
-            # 각 사용자별로 뉴스 확인 (간격 두고 처리)
-            for user_id, keywords in users_keywords.items():
-                for keyword in keywords:
-                    try:
-                        await self._check_news_for_keyword(user_id, keyword)
-                        # 키워드 간 딜레이 (API 부하 분산)
-                        await asyncio.sleep(1)
-                    except Exception as e:
-                        logger.error(f"사용자 {user_id} - 뉴스 확인 중 오류 ({keyword}): {e}")
-                        import traceback
-                        logger.error(traceback.format_exc())
+            # 키워드별로 한 번씩만 크롤링 (최적화!)
+            for keyword, user_ids in keyword_users.items():
+                try:
+                    # 키워드 1번 크롤링
+                    news_list = self.news_crawler.get_latest_news(keyword, last_check_count=10)
+                    
+                    if not news_list:
+                        logger.info(f"키워드 '{keyword}': 뉴스 없음")
+                        continue
+                    
+                    logger.info(f"키워드 '{keyword}': {len(news_list)}개 뉴스 수집, {len(user_ids)}명에게 전송")
+                    
+                    # 같은 키워드를 등록한 모든 사용자에게 전송
+                    for user_id in user_ids:
+                        try:
+                            await self._send_news_to_user(user_id, keyword, news_list)
+                        except Exception as e:
+                            logger.error(f"사용자 {user_id} - 뉴스 전송 중 오류 ({keyword}): {e}")
+                    
+                    # 키워드 간 딜레이 (API 부하 분산)
+                    await asyncio.sleep(1)
+                    
+                except Exception as e:
+                    logger.error(f"키워드 '{keyword}' 처리 중 오류: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
             
             logger.info("=== 뉴스 업데이트 체크 완료 ===")
         except Exception as e:
             logger.error(f"뉴스 업데이트 체크 전체 오류: {e}")
             import traceback
             logger.error(traceback.format_exc())
+    
+    async def _send_news_to_user(self, user_id, keyword, news_list):
+        """특정 사용자에게 뉴스 전송 (키워드별 최적화용)"""
+        # 방해금지 시간 체크
+        if self.is_quiet_time(user_id):
+            logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀 ({keyword})")
+            return
+        
+        # 새로운 뉴스만 필터링
+        new_news = []
+        for news in news_list:
+            if not self.db.is_news_sent(user_id, keyword, news['url']):
+                new_news.append(news)
+        
+        # 새 뉴스가 있으면 전송
+        if new_news:
+            message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
+            message += f"총 {len(new_news)}개\n"
+            message += "━━━━━━━━━━━━━━━━━━━━\n\n"
+            
+            for i, news in enumerate(new_news, 1):
+                title = news['title']
+                source = news['source']
+                date = self._format_date_simple(news['date'])
+                url = news['url']
+                
+                # 제목을 크고 강조
+                message += f"<a href='{url}'><b>🔹 {title}</b></a>\n\n"
+                
+                # 부가 정보는 작고 덜 눈에 띄게
+                message += f"<code>{source}, {date}</code>\n"
+                message += "────────────────────\n\n"
+            
+            # 메시지 전송 시도
+            success = await self.send_message_to_user(user_id, message)
+            
+            # 전송 성공한 경우에만 DB에 기록
+            if success:
+                for news in new_news:
+                    self.db.mark_news_sent(user_id, keyword, news['url'], news['title'])
+                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': {len(new_news)}개의 새 뉴스 전송 성공")
+            else:
+                logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 전송 실패")
     
     async def check_news_for_user(self, user_id, manual_check=False):
         """특정 사용자의 뉴스 확인 (내부 함수, 메시지 없음)"""

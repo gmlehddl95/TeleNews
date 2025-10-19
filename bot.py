@@ -496,6 +496,12 @@ class TeleNewsBot:
                 # 목록에서 추가한 경우, 원본 메시지를 업데이트
                 if is_from_list:
                     try:
+                        # 사용자가 입력한 키워드 메시지 삭제
+                        try:
+                            await update.message.delete()
+                        except:
+                            pass  # 삭제 실패 시 무시
+                        
                         # 로딩 메시지로 업데이트
                         await self.application.bot.edit_message_text(
                             chat_id=waiting_info['chat_id'],
@@ -558,6 +564,12 @@ class TeleNewsBot:
                 
                 # 일반 명령어로 추가한 경우
                 else:
+                    # 사용자가 입력한 키워드 메시지 삭제
+                    try:
+                        await update.message.delete()
+                    except:
+                        pass  # 삭제 실패 시 무시
+                    
                     # 로딩 메시지 표시
                     loading_msg = await update.message.reply_text(f"➕ 키워드를 추가하는 중...")
                     await asyncio.sleep(0.4)  # 애니메이션 효과
@@ -689,7 +701,7 @@ class TeleNewsBot:
                         all_news.extend(news_list)
                     
                     # 전체 뉴스에서 유사뉴스 필터링 (한번만!)
-                    filtered_news = self.news_crawler.filter_similar_news(all_news, similarity_threshold=0.55)
+                    filtered_news = self.news_crawler.filter_similar_news(all_news, similarity_threshold=0.5)
                     
                     # 키워드별로 다시 분류
                     news_by_keyword = defaultdict(list)

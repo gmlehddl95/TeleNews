@@ -281,11 +281,27 @@ class TeleNewsBot:
             
             # 2단계: 실제 삭제
             deleted_count = self.db.remove_all_keywords(user_id)
+            
+            # 3단계: 키워드 목록 화면 표시 (키워드 추가 버튼만)
+            keyboard = [[InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             if deleted_count > 0:
-                await query.edit_message_text(f"✅ 모든 키워드가 제거되었습니다. (총 {deleted_count}개)")
+                await query.edit_message_text(
+                    f"✅ 모든 키워드가 제거되었습니다. (총 {deleted_count}개)\n\n"
+                    "📝 <b>등록된 키워드가 없습니다.</b>\n\n"
+                    "➕ 키워드 추가 버튼을 눌러 키워드를 등록해주세요!",
+                    parse_mode='HTML',
+                    reply_markup=reply_markup
+                )
                 logger.info(f"사용자 {user_id} - 모든 키워드 제거됨 ({deleted_count}개)")
             else:
-                await query.edit_message_text("📝 제거할 키워드가 없습니다.")
+                await query.edit_message_text(
+                    "📝 <b>등록된 키워드가 없습니다.</b>\n\n"
+                    "➕ 키워드 추가 버튼을 눌러 키워드를 등록해주세요!",
+                    parse_mode='HTML',
+                    reply_markup=reply_markup
+                )
         
         elif data.startswith("remove:"):
             # 개별 키워드 삭제 - 애니메이션 효과
@@ -315,7 +331,17 @@ class TeleNewsBot:
                         reply_markup=reply_markup
                     )
                 else:
-                    await query.edit_message_text("✅ 모든 키워드가 제거되었습니다!")
+                    # 마지막 키워드도 삭제됨 - 키워드 추가 버튼 표시
+                    keyboard = [[InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")]]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    await query.edit_message_text(
+                        f"✅ '{keyword}' 제거됨!\n\n"
+                        "📝 <b>등록된 키워드가 없습니다.</b>\n\n"
+                        "➕ 키워드 추가 버튼을 눌러 키워드를 등록해주세요!",
+                        parse_mode='HTML',
+                        reply_markup=reply_markup
+                    )
                 
                 logger.info(f"사용자 {user_id} - 키워드 제거됨: {keyword}")
             else:

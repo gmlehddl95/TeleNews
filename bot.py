@@ -37,8 +37,10 @@ class TeleNewsBot:
         if not quiet_hours or not quiet_hours['enabled']:
             return False
         
-        from datetime import datetime
-        now = datetime.now()
+        from datetime import datetime, timezone, timedelta
+        # 한국 시간 (GMT+9)
+        kst = timezone(timedelta(hours=9))
+        now = datetime.now(kst)
         current_time = now.strftime('%H:%M')
         
         start = quiet_hours['start_time']
@@ -240,51 +242,35 @@ class TeleNewsBot:
         else:
             await update.message.reply_text("📝 제거할 키워드가 없습니다.")
     
-    async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """현재 방해금지 상태 확인"""
-        user_id = update.effective_chat.id
-        quiet_hours = self.db.get_quiet_hours(user_id)
-        
-        from datetime import datetime
-        now = datetime.now()
-        current_time = now.strftime('%H:%M')
-        
-        if not quiet_hours:
-            await update.message.reply_text(
-                "📌 <b>방해금지 설정</b>\n\n"
-                "현재 방해금지가 설정되어 있지 않습니다.\n\n"
-                "/setquiet 명령어로 설정할 수 있습니다.",
-                parse_mode='HTML'
-            )
-            return
-        
-        status = "🔕 활성화" if quiet_hours['enabled'] else "🔔 비활성화"
-        is_currently_quiet = self.is_quiet_time(user_id)
-        current_status = "⚠️ 방해금지 시간입니다" if is_currently_quiet else "✅ 알림 활성 시간입니다"
-        
-        message = f"""📌 <b>방해금지 설정 상태</b>
-
-<b>현재 시간:</b> {current_time}
-<b>설정 상태:</b> {status}
-<b>설정 시간:</b> {quiet_hours['start_time']} ~ {quiet_hours['end_time']}
-
-<b>현재 상태:</b> {current_status}
-
-💡 /setquiet 명령어로 설정을 변경할 수 있습니다.
-"""
-        await update.message.reply_text(message, parse_mode='HTML')
-    
     async def set_quiet_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """방해금지 시간 설정 (버튼 UI)"""
         user_id = update.effective_chat.id
         quiet_hours = self.db.get_quiet_hours(user_id)
         
-        # 현재 설정 정보
+        from datetime import datetime, timezone, timedelta
+        # 한국 시간 (GMT+9)
+        kst = timezone(timedelta(hours=9))
+        now = datetime.now(kst)
+        current_time = now.strftime('%H:%M')
+        
+        # 현재 설정 정보 및 상태
         if quiet_hours:
             status = "🔕 활성화" if quiet_hours['enabled'] else "🔔 비활성화"
-            current_info = f"\n\n📌 현재 설정: {quiet_hours['start_time']} ~ {quiet_hours['end_time']} ({status})"
+            is_currently_quiet = self.is_quiet_time(user_id)
+            current_status = "⚠️ 방해금지 시간" if is_currently_quiet else "✅ 알림 활성"
+            
+            current_info = f"""
+
+📌 <b>현재 상태</b>
+• 현재 시간: {current_time} (KST)
+• 설정: {quiet_hours['start_time']} ~ {quiet_hours['end_time']} ({status})
+• 상태: {current_status}"""
         else:
-            current_info = "\n\n📌 현재 설정 없음"
+            current_info = f"""
+
+📌 <b>현재 상태</b>
+• 현재 시간: {current_time} (KST)
+• 설정 없음"""
         
         # 시작 시간 선택 버튼
         keyboard = [
@@ -1336,7 +1322,6 @@ class TeleNewsBot:
         self.application.add_handler(CommandHandler("news", self.check_news_command))
         self.application.add_handler(CommandHandler("stock", self.stock_info_command))
         self.application.add_handler(CommandHandler("setquiet", self.set_quiet_command))
-        self.application.add_handler(CommandHandler("status", self.status_command))
         
         # 콜백 쿼리 핸들러 (버튼 클릭)
         self.application.add_handler(CallbackQueryHandler(self.handle_callback_query))

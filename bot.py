@@ -416,15 +416,19 @@ class TeleNewsBot:
                 logger.info(f"사용자 {user_id} - 방해금지 시간 설정: {start_time} ~ {end_time}")
         
         elif data == "add_keyword":
-            # 키워드 추가 버튼
-            self.waiting_for_keyword[user_id] = 'add'
+            # 키워드 추가 버튼 - 메시지 ID 저장
+            self.waiting_for_keyword[user_id] = {
+                'action': 'add',
+                'message_id': query.message.message_id,
+                'chat_id': query.message.chat_id
+            }
             await query.edit_message_text(
                 "📝 <b>키워드 추가</b>\n\n"
                 "추가할 키워드를 입력해주세요:\n\n"
                 "예시: 삼성전자, AI, 나스닥, 경제",
                 parse_mode='HTML'
             )
-            logger.info(f"사용자 {user_id} - 키워드 추가 대기 모드 진입")
+            logger.info(f"사용자 {user_id} - 키워드 추가 대기 모드 진입 (목록에서)")
     
     async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """일반 텍스트 메시지 처리 (대화형 키워드 입력 + 버튼 클릭)"""
@@ -447,8 +451,12 @@ class TeleNewsBot:
         
         # 사용자가 키워드 입력 대기 중인지 확인
         if user_id in self.waiting_for_keyword:
-            action = self.waiting_for_keyword[user_id]
+            waiting_info = self.waiting_for_keyword[user_id]
             del self.waiting_for_keyword[user_id]
+            
+            # dict 형태면 목록에서 추가한 것, string이면 일반 명령어
+            is_from_list = isinstance(waiting_info, dict)
+            action = waiting_info['action'] if is_from_list else waiting_info
             
             if action == 'add':
                 input_text = text.strip()
@@ -459,43 +467,108 @@ class TeleNewsBot:
                 else:
                     keywords = [input_text]
                 
-                # 로딩 메시지 표시
-                loading_msg = await update.message.reply_text(f"➕ 키워드를 추가하는 중...")
-                await asyncio.sleep(0.4)  # 애니메이션 효과
+                # 목록에서 추가한 경우, 원본 메시지를 업데이트
+                if is_from_list:
+                    try:
+                        # 로딩 메시지로 업데이트
+                        await self.application.bot.edit_message_text(
+                            chat_id=waiting_info['chat_id'],
+                            message_id=waiting_info['message_id'],
+                            text="➕ 키워드를 추가하는 중..."
+                        )
+                        await asyncio.sleep(0.4)  # 애니메이션 효과
+                        
+                        added = []
+                        already_exist = []
+                        
+                        for keyword in keywords:
+                            if self.db.add_keyword(user_id, keyword):
+                                added.append(keyword)
+                                logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
+                            else:
+                                already_exist.append(keyword)
+                        
+                        # 업데이트된 전체 키워드 목록 가져오기
+                        all_keywords = self.db.get_keywords(user_id)
+                        
+                        if all_keywords:
+                            keyword_list = '\n'.join([f"• {kw}" for kw in all_keywords])
+                            keyboard = []
+                            for kw in all_keywords:
+                                keyboard.append([InlineKeyboardButton(f"🗑️ {kw} 삭제", callback_data=f"remove:{kw}")])
+                            keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
+                            keyboard.append([InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")])
+                            reply_markup = InlineKeyboardMarkup(keyboard)
+                            
+                            # 성공 메시지 생성
+                            result_msg = ""
+                            if added:
+                                if len(added) == 1:
+                                    result_msg = f"✅ '{added[0]}' 추가됨!"
+                                else:
+                                    result_msg = f"✅ {len(added)}개 키워드 추가됨: {', '.join(added)}"
+                            
+                            if already_exist:
+                                if result_msg:
+                                    result_msg += "\n"
+                                result_msg += f"⚠️ 이미 등록됨: {', '.join(already_exist)}"
+                            
+                            await self.application.bot.edit_message_text(
+                                chat_id=waiting_info['chat_id'],
+                                message_id=waiting_info['message_id'],
+                                text=f"{result_msg}\n\n📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 관리할 수 있습니다:",
+                                parse_mode='HTML',
+                                reply_markup=reply_markup
+                            )
+                        else:
+                            await self.application.bot.edit_message_text(
+                                chat_id=waiting_info['chat_id'],
+                                message_id=waiting_info['message_id'],
+                                text="❌ 키워드 추가 실패"
+                            )
+                    except Exception as e:
+                        logger.error(f"키워드 목록 업데이트 실패: {e}")
+                        await update.message.reply_text("❌ 키워드 추가 중 오류가 발생했습니다.")
                 
-                added = []
-                already_exist = []
-                
-                for keyword in keywords:
-                    if self.db.add_keyword(user_id, keyword):
-                        added.append(keyword)
-                        logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
-                    else:
-                        already_exist.append(keyword)
-                
-                # 결과 메시지 생성
-                message = ""
-                if added:
-                    if len(added) == 1:
-                        message += f"✅ 키워드 '{added[0]}'가 추가되었습니다!"
-                    else:
-                        message += f"✅ {len(added)}개 키워드 추가:\n"
-                        message += ", ".join(added)
-                
-                if already_exist:
-                    if message:
-                        message += "\n\n"
-                    if len(already_exist) == 1:
-                        message += f"⚠️ 키워드 '{already_exist[0]}'는 이미 등록되어 있습니다."
-                    else:
-                        message += f"⚠️ {len(already_exist)}개 이미 등록됨:\n"
-                        message += ", ".join(already_exist)
-                
-                # 로딩 메시지 수정
-                try:
-                    await loading_msg.edit_text(message if message else "❌ 추가할 키워드가 없습니다.")
-                except:
-                    await update.message.reply_text(message if message else "❌ 추가할 키워드가 없습니다.")
+                # 일반 명령어로 추가한 경우
+                else:
+                    # 로딩 메시지 표시
+                    loading_msg = await update.message.reply_text(f"➕ 키워드를 추가하는 중...")
+                    await asyncio.sleep(0.4)  # 애니메이션 효과
+                    
+                    added = []
+                    already_exist = []
+                    
+                    for keyword in keywords:
+                        if self.db.add_keyword(user_id, keyword):
+                            added.append(keyword)
+                            logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
+                        else:
+                            already_exist.append(keyword)
+                    
+                    # 결과 메시지 생성
+                    message = ""
+                    if added:
+                        if len(added) == 1:
+                            message += f"✅ 키워드 '{added[0]}'가 추가되었습니다!"
+                        else:
+                            message += f"✅ {len(added)}개 키워드 추가:\n"
+                            message += ", ".join(added)
+                    
+                    if already_exist:
+                        if message:
+                            message += "\n\n"
+                        if len(already_exist) == 1:
+                            message += f"⚠️ 키워드 '{already_exist[0]}'는 이미 등록되어 있습니다."
+                        else:
+                            message += f"⚠️ {len(already_exist)}개 이미 등록됨:\n"
+                            message += ", ".join(already_exist)
+                    
+                    # 로딩 메시지 수정
+                    try:
+                        await loading_msg.edit_text(message if message else "❌ 추가할 키워드가 없습니다.")
+                    except:
+                        await update.message.reply_text(message if message else "❌ 추가할 키워드가 없습니다.")
     
     async def check_news_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """수동으로 뉴스 확인"""

@@ -573,6 +573,30 @@ class TeleNewsBot:
             import traceback
             logger.error(traceback.format_exc())
     
+    def _sort_news_by_date(self, news_list):
+        """뉴스를 날짜순으로 정렬 (최신 뉴스가 상단)"""
+        try:
+            from datetime import datetime
+            
+            def parse_date(news):
+                """뉴스 날짜를 datetime 객체로 변환"""
+                try:
+                    date_str = news['date']
+                    if '+' in date_str or '-' in date_str:
+                        dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
+                    else:
+                        dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S')
+                    return dt
+                except:
+                    return datetime.now()
+            
+            # 날짜순 정렬 (최신 우선, 내림차순)
+            sorted_news = sorted(news_list, key=parse_date, reverse=True)
+            return sorted_news
+        except Exception as e:
+            logger.warning(f"뉴스 정렬 실패: {e}, 원본 순서 유지")
+            return news_list
+    
     def _get_news_icon(self, news):
         """뉴스 아이콘 결정 (유사 개수 및 단독 여부 기반)"""
         title = news.get('title', '')

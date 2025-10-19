@@ -659,19 +659,16 @@ class TeleNewsBot:
             weekday_kr = ['월', '화', '수', '목', '금', '토', '일']
             weekday = weekday_kr[dt.weekday()]
             
-            # 포맷: 10.18(토) 10:50(6분전)
-            if minutes_ago < 1:
-                time_ago = "방금"
+            # 포맷: 10.18(토) 18:26 🆕 (발행 시간 + 새 뉴스 표시)
+            # 현재 시간과 비교하여 최근성 표시
+            if minutes_ago < 15:
+                time_badge = " 🔥"  # 15분 이내: 초속보
             elif minutes_ago < 60:
-                time_ago = f"{minutes_ago}분전"
-            elif minutes_ago < 1440:  # 24시간
-                hours_ago = minutes_ago // 60
-                time_ago = f"{hours_ago}시간전"
+                time_badge = " 🆕"  # 1시간 이내: 새 뉴스
             else:
-                days_ago = minutes_ago // 1440
-                time_ago = f"{days_ago}일전"
+                time_badge = " (방금 발견)"  # 1시간 이상: 네이버 늦은 등록
             
-            return f"{dt.month}.{dt.day}({weekday}) {dt.strftime('%H:%M')}({time_ago})"
+            return f"{dt.month}.{dt.day}({weekday}) {dt.strftime('%H:%M')}{time_badge}"
             
         except Exception as e:
             print(f"[DEBUG] 날짜 파싱 오류: {e}")

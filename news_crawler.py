@@ -127,7 +127,7 @@ class NaverNewsCrawler:
             params = {
                 'query': keyword,
                 'display': api_fetch_count,  # API에서 가져올 개수
-                'sort': 'date'  # 최신순 정렬 (최신 뉴스 우선)
+                'sort': 'sim'  # 관련도순 정렬 (정확도 높음, 중복체크로 새 뉴스만 필터링됨)
             }
             
             print(f"[DEBUG] 네이버 API 검색: {keyword}")

@@ -124,21 +124,52 @@ class TeleNewsBot:
         await self.safe_reply(update.message, welcome_message, parse_mode='HTML', reply_markup=reply_markup)
     
     async def add_keyword_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """키워드 추가"""
+        """키워드 추가 (콤마로 구분하여 여러 개 동시 입력 가능)"""
         user_id = update.effective_chat.id
         
-        # 인자가 있으면 바로 추가 (예: /add 삼성전자)
+        # 인자가 있으면 바로 추가
         if context.args:
-            keyword = ' '.join(context.args)
-            if self.db.add_keyword(user_id, keyword):
-                await self.safe_reply(update.message, f"✅ 키워드 '{keyword}' 추가되었습니다!")
-                logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
+            input_text = ' '.join(context.args)
+            
+            # 콤마가 있으면 분리, 없으면 그대로 사용
+            if ',' in input_text:
+                keywords = [kw.strip() for kw in input_text.split(',') if kw.strip()]
             else:
-                await self.safe_reply(update.message, f"⚠️ 키워드 '{keyword}' 이미 등록되어 있습니다.")
+                keywords = [input_text.strip()]
+            
+            added = []
+            already_exist = []
+            
+            for keyword in keywords:
+                if self.db.add_keyword(user_id, keyword):
+                    added.append(keyword)
+                    logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
+                else:
+                    already_exist.append(keyword)
+            
+            # 결과 메시지 생성
+            message = ""
+            if added:
+                if len(added) == 1:
+                    message += f"✅ 키워드 '{added[0]}' 추가되었습니다!"
+                else:
+                    message += f"✅ {len(added)}개 키워드 추가:\n"
+                    message += ", ".join(added)
+            
+            if already_exist:
+                if message:
+                    message += "\n\n"
+                if len(already_exist) == 1:
+                    message += f"⚠️ 키워드 '{already_exist[0]}' 이미 등록되어 있습니다."
+                else:
+                    message += f"⚠️ {len(already_exist)}개 이미 등록됨:\n"
+                    message += ", ".join(already_exist)
+            
+            await self.safe_reply(update.message, message if message else "❌ 추가할 키워드가 없습니다.")
         else:
             # 인자가 없으면 대화형 모드 시작
             self.waiting_for_keyword[user_id] = 'add'
-            await self.safe_reply(update.message, "📝 추가할 키워드를 입력해주세요:\n\n예시: 삼성전자, AI, 나스닥")
+            await self.safe_reply(update.message, "📝 추가할 키워드를 입력해주세요:\n\n예시: 삼성전자, AI, 나스닥\n\n💡 콤마(,)로 구분하여 여러 개를 한번에 입력할 수 있습니다!")
     
     async def remove_keyword_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """키워드 제거"""
@@ -400,12 +431,43 @@ class TeleNewsBot:
             del self.waiting_for_keyword[user_id]
             
             if action == 'add':
-                keyword = text.strip()
-                if self.db.add_keyword(user_id, keyword):
-                    await update.message.reply_text(f"✅ 키워드 '{keyword}'가 추가되었습니다!")
-                    logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
+                input_text = text.strip()
+                
+                # 콤마가 있으면 분리, 없으면 그대로 사용
+                if ',' in input_text:
+                    keywords = [kw.strip() for kw in input_text.split(',') if kw.strip()]
                 else:
-                    await update.message.reply_text(f"⚠️ 키워드 '{keyword}'는 이미 등록되어 있습니다.")
+                    keywords = [input_text]
+                
+                added = []
+                already_exist = []
+                
+                for keyword in keywords:
+                    if self.db.add_keyword(user_id, keyword):
+                        added.append(keyword)
+                        logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
+                    else:
+                        already_exist.append(keyword)
+                
+                # 결과 메시지 생성
+                message = ""
+                if added:
+                    if len(added) == 1:
+                        message += f"✅ 키워드 '{added[0]}'가 추가되었습니다!"
+                    else:
+                        message += f"✅ {len(added)}개 키워드 추가:\n"
+                        message += ", ".join(added)
+                
+                if already_exist:
+                    if message:
+                        message += "\n\n"
+                    if len(already_exist) == 1:
+                        message += f"⚠️ 키워드 '{already_exist[0]}'는 이미 등록되어 있습니다."
+                    else:
+                        message += f"⚠️ {len(already_exist)}개 이미 등록됨:\n"
+                        message += ", ".join(already_exist)
+                
+                await update.message.reply_text(message if message else "❌ 추가할 키워드가 없습니다.")
     
     async def check_news_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """수동으로 뉴스 확인"""

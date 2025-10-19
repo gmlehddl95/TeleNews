@@ -195,9 +195,10 @@ class NaverNewsCrawler:
                                 'heraldcorp.com': '헤럴드경제', 'womaneconomy.co.kr': '여성경제신문',
                                 'cm.asiae.co.kr': '아시아경제', 'busan.com': '부산일보',
                                 'kado.net': '강원도민일보', 'pennmike.com': '펜엔마이크',
-                                'etoday.co.kr': '이투데이', 'newsprime.co.kr': '프라임경제', 
-                                'nongmin.com': '농민신문', 'kookje.co.kr': '국제신문'
-                                
+                                'etoday.co.kr': '이투데이', 'newsprime.co.kr': '프라임경제',                                 'nongmin.com': '농민신문', 'kookje.co.kr': '국제신문', 
+                                'newscj.com': '천지일보', 'pointdaily.co.kr': '포인트데일리', 
+                                'daily.hankooki.com': '데일리한국', 'news.einfomax.co.kr': '연합인포맥스'
+                            
                             }
                             
                             for key, value in domain_map.items():

@@ -135,8 +135,8 @@ class Database:
             self.conn.rollback()
             return False
     
-    def cleanup_old_news(self, days=30):
-        """오래된 뉴스 기록 삭제 (기본 30일)"""
+    def cleanup_old_news(self, days=7):
+        """오래된 뉴스 기록 삭제 (기본 7일)"""
         try:
             cursor = self.conn.cursor()
             cursor.execute('''

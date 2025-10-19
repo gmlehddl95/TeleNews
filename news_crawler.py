@@ -217,16 +217,16 @@ class NaverNewsCrawler:
                         if parts and len(parts[0]) < 20:
                             source = parts[0].strip()
                     
-                    # 날짜 필터링: 30일 이내의 뉴스만 가져오기
+                    # 날짜 필터링: 7일 이내의 뉴스만 가져오기
                     try:
                         # RFC 2822 형식 파싱 (예: "Mon, 18 Oct 2025 10:30:00 +0900")
                         news_date = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z')
                         # timezone-aware 현재 시간
                         now = datetime.now(news_date.tzinfo)
-                        # 30일 이전 날짜
-                        cutoff_date = now - timedelta(days=30)
+                        # 7일 이전 날짜
+                        cutoff_date = now - timedelta(days=7)
                         
-                        # 30일 이전 뉴스는 건너뛰기
+                        # 7일 이전 뉴스는 건너뛰기
                         if news_date < cutoff_date:
                             print(f"[DEBUG] 오래된 뉴스 제외: {title} (작성일: {news_date.strftime('%Y-%m-%d')})")
                             continue

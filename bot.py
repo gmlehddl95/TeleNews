@@ -436,8 +436,8 @@ class TeleNewsBot:
         try:
             logger.info("=== 뉴스 업데이트 체크 시작 ===")
             
-            # 30일 이상 오래된 뉴스 기록 삭제
-            self.db.cleanup_old_news(days=30)
+            # 7일 이상 오래된 뉴스 기록 삭제
+            self.db.cleanup_old_news(days=7)
             
             user_keywords = self.db.get_all_user_keywords()
             

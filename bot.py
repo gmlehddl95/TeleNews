@@ -520,7 +520,7 @@ class TeleNewsBot:
             for keyword, user_ids in keyword_users.items():
                 try:
                     # 키워드 1번 크롤링
-                    news_list = self.news_crawler.get_latest_news(keyword, last_check_count=10)
+                    news_list = self.news_crawler.get_latest_news(keyword, last_check_count=15)
                     
                     if not news_list:
                         logger.info(f"키워드 '{keyword}': 뉴스 없음")
@@ -647,8 +647,8 @@ class TeleNewsBot:
             logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀")
             return
         
-        # 네이버 첫 페이지 분량 (10개) 가져오기
-        news_list = self.news_crawler.get_latest_news(keyword, last_check_count=10)
+        # 네이버 최신 뉴스 (15개) 가져오기
+        news_list = self.news_crawler.get_latest_news(keyword, last_check_count=15)
         
         if not news_list:
             if manual_check:

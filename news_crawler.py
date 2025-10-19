@@ -259,7 +259,7 @@ class NaverNewsCrawler:
             print(f"[DEBUG] 총 {len(news_list)}개 뉴스 수집 완료")
             
             # 유사 뉴스 필터링 (대표 뉴스만 반환)
-            filtered_news = self.filter_similar_news(news_list, similarity_threshold=0.60)
+            filtered_news = self.filter_similar_news(news_list, similarity_threshold=0.55)
             
             # 최종적으로 max_results 개수만 반환
             final_news = filtered_news[:max_results]

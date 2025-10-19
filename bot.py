@@ -427,35 +427,49 @@ class TeleNewsBot:
     async def stock_info_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """주가 정보 확인"""
         await update.message.reply_text("📊 주가 정보를 가져오는 중...")
-        report = self.stock_monitor.get_full_report_html()
+        # 동기 함수를 별도 스레드에서 실행
+        report = await asyncio.to_thread(self.stock_monitor.get_full_report_html)
         await update.message.reply_text(report, parse_mode='HTML')
     
     async def check_news_updates(self):
         """뉴스 업데이트 확인 (스케줄러용 - 모든 사용자)"""
-        # 30일 이상 오래된 뉴스 기록 삭제
-        self.db.cleanup_old_news(days=30)
-        
-        user_keywords = self.db.get_all_user_keywords()
-        
-        if not user_keywords:
-            logger.info("등록된 키워드가 없습니다.")
-            return
-        
-        # user_id별로 그룹화
-        from collections import defaultdict
-        users_keywords = defaultdict(list)
-        for user_id, keyword in user_keywords:
-            users_keywords[user_id].append(keyword)
-        
-        # 각 사용자별로 뉴스 확인 (간격 두고 처리)
-        for user_id, keywords in users_keywords.items():
-            for keyword in keywords:
-                try:
-                    await self._check_news_for_keyword(user_id, keyword)
-                    # 키워드 간 딜레이 (API 부하 분산)
-                    await asyncio.sleep(1)
-                except Exception as e:
-                    logger.error(f"사용자 {user_id} - 뉴스 확인 중 오류 ({keyword}): {e}")
+        try:
+            logger.info("=== 뉴스 업데이트 체크 시작 ===")
+            
+            # 30일 이상 오래된 뉴스 기록 삭제
+            self.db.cleanup_old_news(days=30)
+            
+            user_keywords = self.db.get_all_user_keywords()
+            
+            if not user_keywords:
+                logger.info("등록된 키워드가 없습니다.")
+                return
+            
+            # user_id별로 그룹화
+            from collections import defaultdict
+            users_keywords = defaultdict(list)
+            for user_id, keyword in user_keywords:
+                users_keywords[user_id].append(keyword)
+            
+            logger.info(f"{len(users_keywords)}명의 사용자, 총 {len(user_keywords)}개 키워드 확인")
+            
+            # 각 사용자별로 뉴스 확인 (간격 두고 처리)
+            for user_id, keywords in users_keywords.items():
+                for keyword in keywords:
+                    try:
+                        await self._check_news_for_keyword(user_id, keyword)
+                        # 키워드 간 딜레이 (API 부하 분산)
+                        await asyncio.sleep(1)
+                    except Exception as e:
+                        logger.error(f"사용자 {user_id} - 뉴스 확인 중 오류 ({keyword}): {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+            
+            logger.info("=== 뉴스 업데이트 체크 완료 ===")
+        except Exception as e:
+            logger.error(f"뉴스 업데이트 체크 전체 오류: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     async def check_news_for_user(self, user_id, manual_check=False):
         """특정 사용자의 뉴스 확인 (내부 함수, 메시지 없음)"""
@@ -617,9 +631,12 @@ class TeleNewsBot:
     async def check_stock_drop_alerts(self):
         """주가 하락 알림 체크 (5%부터 1%p 단위로 100%까지)"""
         try:
-            # 나스닥 정보 가져오기
-            nasdaq_info = self.stock_monitor.get_nasdaq_info()
+            logger.info("=== 주가 하락 알림 체크 시작 ===")
+            
+            # 나스닥 정보 가져오기 (동기 함수를 별도 스레드에서 실행)
+            nasdaq_info = await asyncio.to_thread(self.stock_monitor.get_nasdaq_info)
             if not nasdaq_info:
+                logger.warning("나스닥 정보를 가져올 수 없습니다. 주가 알림 건너뜀")
                 return
             
             current_price = nasdaq_info['current_price']
@@ -627,54 +644,68 @@ class TeleNewsBot:
             ath_date = nasdaq_info['ath_date'].strftime('%Y-%m-%d')
             drop_percentage = nasdaq_info['drop_percentage']
             
+            logger.info(f"나스닥 현재가: ${current_price:,.2f}, 전고점 대비: {drop_percentage:.2f}% 하락")
+            
             # 하락률에 따른 레벨 계산 (1%p 단위, 5% 이상만)
             # 5.0~5.9%: 레벨 5, 6.0~6.9%: 레벨 6, 7.0~7.9%: 레벨 7, ...
             current_level = int(drop_percentage)
             
             # 모든 사용자에게 알림
             all_users = self.db.get_all_users()
+            logger.info(f"{len(all_users)}명의 사용자에게 알림 확인")
             
             for user_id in all_users:
-                # 마지막 알림 레벨 확인
-                last_alert = self.db.get_last_stock_alert_level(user_id)
-                
-                # 전고점이 변경되었거나, 레벨이 올라갔을 때만 알림 (각 레벨당 최초 1회)
-                should_alert = False
-                if last_alert is None or last_alert['ath_price'] != ath_price:
-                    # 새로운 전고점 또는 첫 알림
-                    if current_level >= 5:  # 5% 이상 하락 시에만 알림
+                try:
+                    # 마지막 알림 레벨 확인
+                    last_alert = self.db.get_last_stock_alert_level(user_id)
+                    
+                    # 전고점이 변경되었거나, 레벨이 올라갔을 때만 알림 (각 레벨당 최초 1회)
+                    should_alert = False
+                    if last_alert is None or last_alert['ath_price'] != ath_price:
+                        # 새로운 전고점 또는 첫 알림
+                        if current_level >= 5:  # 5% 이상 하락 시에만 알림
+                            should_alert = True
+                    elif current_level > last_alert['last_level'] and current_level >= 5:
+                        # 기존 전고점에서 하락 레벨이 증가 (예: 5% → 10%)
                         should_alert = True
-                elif current_level > last_alert['last_level'] and current_level >= 5:
-                    # 기존 전고점에서 하락 레벨이 증가 (예: 5% → 10%)
-                    should_alert = True
-                
-                if not should_alert:
-                    continue
-                
-                # 방해금지 시간 체크
-                if self.is_quiet_time(user_id):
-                    logger.info(f"사용자 {user_id} - 방해금지 시간, 주가 알림 대기 중 ({current_level}% 하락)")
-                    # DB에 pending 상태로 저장 (방해금지 해제 시 전송)
-                    self.db.set_pending_stock_alert(user_id, current_level, ath_price, ath_date, nasdaq_info)
-                    continue
-                
-                # 알림 전송 및 성공 시에만 DB 업데이트
-                success = await self._send_drop_alert(user_id, current_level, nasdaq_info)
-                if success:
-                    self.db.update_stock_alert_level(user_id, current_level, ath_price, ath_date)
-                else:
-                    logger.warning(f"사용자 {user_id} - 주가 알림 전송 실패, DB 업데이트 안 함 (다음에 재시도)")
-                
-                # 사용자 간 딜레이 (메시지 전송 간격 확보)
-                await asyncio.sleep(1)
+                    
+                    if not should_alert:
+                        continue
+                    
+                    # 방해금지 시간 체크
+                    if self.is_quiet_time(user_id):
+                        logger.info(f"사용자 {user_id} - 방해금지 시간, 주가 알림 대기 중 ({current_level}% 하락)")
+                        # DB에 pending 상태로 저장 (방해금지 해제 시 전송)
+                        self.db.set_pending_stock_alert(user_id, current_level, ath_price, ath_date, nasdaq_info)
+                        continue
+                    
+                    # 알림 전송 및 성공 시에만 DB 업데이트
+                    success = await self._send_drop_alert(user_id, current_level, nasdaq_info)
+                    if success:
+                        self.db.update_stock_alert_level(user_id, current_level, ath_price, ath_date)
+                    else:
+                        logger.warning(f"사용자 {user_id} - 주가 알림 전송 실패, DB 업데이트 안 함 (다음에 재시도)")
+                    
+                    # 사용자 간 딜레이 (메시지 전송 간격 확보)
+                    await asyncio.sleep(1)
+                except Exception as e:
+                    logger.error(f"사용자 {user_id} - 주가 알림 처리 중 오류: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            
+            logger.info("=== 주가 하락 알림 체크 완료 ===")
                 
         except Exception as e:
-            logger.error(f"주가 하락 알림 체크 중 오류: {e}")
+            logger.error(f"주가 하락 알림 체크 전체 오류: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     async def _send_drop_alert(self, user_id, drop_level, nasdaq_info):
         """주가 하락 알림 전송"""
-        tqqq_info = self.stock_monitor.get_tqqq_info()
+        # TQQQ 정보 가져오기 (동기 함수를 별도 스레드에서 실행)
+        tqqq_info = await asyncio.to_thread(self.stock_monitor.get_tqqq_info)
         if not tqqq_info:
+            logger.warning(f"사용자 {user_id} - TQQQ 정보를 가져올 수 없어 알림 전송 실패")
             return False
         
         # TQQQ 시나리오 계산
@@ -780,14 +811,30 @@ class TeleNewsBot:
         except Exception as e:
             logger.error(f"메시지 전송 오류: {e}")
     
+    async def heartbeat(self):
+        """스케줄러 상태 확인 (heartbeat)"""
+        logger.info("💓 봇 정상 작동 중...")
+    
     def setup_scheduler(self):
         """스케줄러 설정"""
+        # Heartbeat - 15분마다 (봇이 살아있음을 확인)
+        self.scheduler.add_job(
+            self.heartbeat,
+            'interval',
+            minutes=15,
+            id='heartbeat'
+        )
+        logger.info("Heartbeat 스케줄러 등록: 15분 간격")
+        
         # 뉴스 체크 - 주기적으로
         self.scheduler.add_job(
             self.check_news_updates,
             'interval',
             minutes=NEWS_CHECK_INTERVAL,
-            id='news_check'
+            id='news_check',
+            max_instances=1,  # 동시 실행 방지
+            coalesce=True,    # 누락된 작업 병합
+            misfire_grace_time=300  # 5분 이내 누락은 허용
         )
         logger.info(f"뉴스 체크 스케줄러 등록: {NEWS_CHECK_INTERVAL}분 간격")
         
@@ -796,7 +843,10 @@ class TeleNewsBot:
             self.check_stock_drop_alerts,
             'interval',
             hours=2,
-            id='stock_drop_check'
+            id='stock_drop_check',
+            max_instances=1,  # 동시 실행 방지
+            coalesce=True,    # 누락된 작업 병합
+            misfire_grace_time=600  # 10분 이내 누락은 허용
         )
         logger.info("주가 하락 알림 스케줄러 등록: 2시간 간격 (5%부터 1%p 단위로 최초 1회 알림)")
         

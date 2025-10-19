@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import time
 import pandas as pd
 import requests
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
 class StockMonitor:
     def __init__(self):
@@ -12,10 +13,11 @@ class StockMonitor:
         self.last_tqqq_call = 0
         self.min_interval = 10  # 최소 10초 간격
     
-    def get_nasdaq_info(self, retry_count=3):
+    def get_nasdaq_info(self, retry_count=3, timeout=30):
         """
         나스닥 100 현재 가격 및 전고점 대비 정보 조회
         :param retry_count: 재시도 횟수
+        :param timeout: 최대 대기 시간 (초)
         :return: dict with current_price, all_time_high, percentage, drop_scenarios
         """
         # Rate limiting 체크
@@ -36,8 +38,19 @@ class StockMonitor:
                 # Ticker 객체 사용 (더 안정적)
                 nasdaq = yf.Ticker(self.nasdaq_ticker)
                 
-                # 최근 데이터 가져오기
-                hist = nasdaq.history(period="2y", interval="1d", auto_adjust=True)
+                # ThreadPoolExecutor로 타임아웃 처리 (Windows 호환)
+                def fetch_history():
+                    return nasdaq.history(period="2y", interval="1d", auto_adjust=True)
+                
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(fetch_history)
+                    try:
+                        hist = future.result(timeout=timeout)
+                    except FutureTimeoutError:
+                        print(f"[WARNING] yfinance API 타임아웃 ({timeout}초 초과)")
+                        if attempt < retry_count - 1:
+                            continue
+                        return None
                 
                 self.last_nasdaq_call = time.time()
                 
@@ -83,10 +96,11 @@ class StockMonitor:
         
         return None
     
-    def get_tqqq_info(self, retry_count=3):
+    def get_tqqq_info(self, retry_count=3, timeout=30):
         """
         TQQQ 현재 가격 조회
         :param retry_count: 재시도 횟수
+        :param timeout: 최대 대기 시간 (초)
         :return: dict with current_price
         """
         # Rate limiting 체크
@@ -110,8 +124,19 @@ class StockMonitor:
                 # Ticker 객체 사용
                 tqqq = yf.Ticker(self.tqqq_ticker)
                 
-                # 최근 데이터 가져오기
-                hist = tqqq.history(period="5d", interval="1d", auto_adjust=True)
+                # ThreadPoolExecutor로 타임아웃 처리 (Windows 호환)
+                def fetch_history():
+                    return tqqq.history(period="5d", interval="1d", auto_adjust=True)
+                
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(fetch_history)
+                    try:
+                        hist = future.result(timeout=timeout)
+                    except FutureTimeoutError:
+                        print(f"[WARNING] TQQQ yfinance API 타임아웃 ({timeout}초 초과)")
+                        if attempt < retry_count - 1:
+                            continue
+                        return None
                 
                 self.last_tqqq_call = time.time()
                 

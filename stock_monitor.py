@@ -176,8 +176,8 @@ class StockMonitor:
         
         실제 데이터 (2022년 폭락):
         - 나스닥 20% 하락 → TQQQ 53% 하락 (2.60x)
-        - 나스닥 30% 하락 → TQQQ 75% 하락 (2.29x)
-        - 나스닥 38% 하락 → TQQQ 82% 하락 (2.18x)
+        - 나스닥 30% 하락 → TQQQ 75% 하락 (2.35x)
+        - 나스닥 40% 하락 → TQQQ 82% 하락 (2.15x)
         
         :param nasdaq_current: 나스닥 현재 가격
         :param nasdaq_ath: 나스닥 전고점
@@ -192,12 +192,18 @@ class StockMonitor:
         # 하락률에 따른 실제 레버리지 배수 (2022년 실제 데이터 기반)
         # 변동성 손실(volatility decay)을 반영
         leverage_map = {
-            20: 2.60,  # 20% 하락 시 2.60배
-            30: 2.35,  # 30% 하락 시 2.35배  
-            40: 2.15   # 40% 하락 시 2.15배
+            10: 2.70,  # 10% 하락 시 (추정)
+            15: 2.65,  # 15% 하락 시 (추정)
+            20: 2.60,  # 20% 하락 시 (실제 데이터)
+            25: 2.48,  # 25% 하락 시 (보간)
+            30: 2.35,  # 30% 하락 시 (실제 데이터)
+            35: 2.25,  # 35% 하락 시 (보간)
+            40: 2.15,  # 40% 하락 시 (실제 데이터)
+            45: 2.08,  # 45% 하락 시 (추정)
+            50: 2.00   # 50% 하락 시 (추정)
         }
         
-        for drop in [20, 30, 40]:
+        for drop in [10, 15, 20, 25, 30, 35, 40, 45, 50]:
             # 전고점 대비 drop% 하락한 나스닥 가격
             target_nasdaq = nasdaq_ath * (1 - drop / 100)
             
@@ -211,7 +217,7 @@ class StockMonitor:
             # 예상 TQQQ 가격
             estimated_tqqq = tqqq_current * (1 + total_tqqq_change)
             
-            scenarios[f'{drop}%'] = round(max(estimated_tqqq, 0.01), 2)  # 최소 $0.01
+            scenarios[drop] = round(max(estimated_tqqq, 0.01), 2)  # 최소 $0.01
         
         return scenarios
     
@@ -247,10 +253,17 @@ class StockMonitor:
 <b>TQQQ</b>
 • 현재가: ${tqqq_info['current_price']:.2f}
 
-<b>📉 나스닥 하락 시나리오별 TQQQ 예상가</b>
-• 전고점 대비 20% 하락 시: ${scenarios['20%']:.2f}
-• 전고점 대비 30% 하락 시: ${scenarios['30%']:.2f}
-• 전고점 대비 40% 하락 시: ${scenarios['40%']:.2f}
+<b>📉 나스닥 100 하락 시 (전고점 대비) TQQQ 예상가</b>
+<i>(20거래일 가정, 복리 계산)</i>
+• 10% 하락 시: ${scenarios[10]:.2f}
+• 15% 하락 시: ${scenarios[15]:.2f}
+• 20% 하락 시: ${scenarios[20]:.2f}
+• 25% 하락 시: ${scenarios[25]:.2f}
+• 30% 하락 시: ${scenarios[30]:.2f}
+• 35% 하락 시: ${scenarios[35]:.2f}
+• 40% 하락 시: ${scenarios[40]:.2f}
+• 45% 하락 시: ${scenarios[45]:.2f}
+• 50% 하락 시: ${scenarios[50]:.2f}
 
 """
         return report

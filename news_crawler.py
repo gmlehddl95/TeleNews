@@ -77,7 +77,7 @@ class NaverNewsCrawler:
         return SequenceMatcher(None, title1_norm, title2_norm).ratio()
     
     def filter_similar_news(self, news_list, similarity_threshold=0.75):
-        """유사한 뉴스를 필터링하여 대표 뉴스만 반환"""
+        """유사한 뉴스를 필터링하여 대표 뉴스만 반환 (유사 개수 포함)"""
         if not news_list:
             return []
         
@@ -85,20 +85,26 @@ class NaverNewsCrawler:
         
         for news in news_list:
             is_duplicate = False
+            similar_to_idx = -1
             
             # 이미 선택된 뉴스들과 비교
-            for selected in filtered_news:
+            for idx, selected in enumerate(filtered_news):
                 similarity = self.calculate_similarity(news['title'], selected['title'])
                 
                 # 유사도가 threshold 이상이면 중복으로 간주
                 if similarity >= similarity_threshold:
                     is_duplicate = True
+                    similar_to_idx = idx
                     print(f"[DEBUG] 유사 뉴스 제외 (유사도 {similarity:.2f}): {news['title']}")
                     break
             
-            # 중복이 아니면 추가
+            # 중복이 아니면 추가 (유사 개수 1로 초기화)
             if not is_duplicate:
+                news['similar_count'] = 1
                 filtered_news.append(news)
+            else:
+                # 중복이면 대표 뉴스의 similar_count 증가
+                filtered_news[similar_to_idx]['similar_count'] = filtered_news[similar_to_idx].get('similar_count', 1) + 1
         
         print(f"[DEBUG] 유사 뉴스 필터링: {len(news_list)}개 → {len(filtered_news)}개")
         return filtered_news

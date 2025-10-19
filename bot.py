@@ -549,8 +549,8 @@ class TeleNewsBot:
             import traceback
             logger.error(traceback.format_exc())
     
-    def _sort_news_by_date(self, news_list):
-        """뉴스를 날짜순으로 정렬 (최신 뉴스가 먼저)"""
+    def _sort_news_by_importance(self, news_list):
+        """뉴스를 중요도와 날짜로 정렬 (유사 개수 많은 것 → 최신순)"""
         try:
             from datetime import datetime
             
@@ -558,24 +558,42 @@ class TeleNewsBot:
                 """뉴스 날짜를 datetime 객체로 변환"""
                 try:
                     date_str = news['date']
-                    # "Sat, 18 Oct 2025 10:40:00 +0900" 형식 파싱
                     if '+' in date_str or '-' in date_str:
-                        # 시간대 정보가 있는 경우
                         dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
                     else:
                         dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S')
                     return dt
                 except:
-                    # 파싱 실패 시 현재 시간 반환 (맨 위에 배치)
                     return datetime.now()
             
-            # 날짜 기준 내림차순 정렬 (최신이 먼저)
-            sorted_news = sorted(news_list, key=parse_date, reverse=True)
+            # 1차: 유사 개수 (많은 것 우선, 내림차순)
+            # 2차: 날짜 (최신 우선, 내림차순)
+            sorted_news = sorted(
+                news_list, 
+                key=lambda x: (x.get('similar_count', 1), parse_date(x)),
+                reverse=True
+            )
             return sorted_news
         except Exception as e:
-            # 정렬 실패 시 원본 반환
             logger.warning(f"뉴스 정렬 실패: {e}, 원본 순서 유지")
             return news_list
+    
+    def _get_news_icon(self, news):
+        """뉴스 아이콘 결정 (유사 개수 및 단독 여부 기반)"""
+        title = news.get('title', '')
+        similar_count = news.get('similar_count', 1)
+        
+        # 제목에 [단독] 또는 "단독" 포함 시 별표
+        if '[단독]' in title or '(단독)' in title or '"단독"' in title:
+            return '⭐'
+        
+        # 유사 개수에 따른 아이콘
+        if similar_count >= 5:
+            return '🔥🔥'
+        elif similar_count >= 2:
+            return '🔥'
+        else:
+            return '🔹'  # 1건: 현재와 동일
     
     async def _send_news_to_user(self, user_id, keyword, news_list):
         """특정 사용자에게 뉴스 전송 (키워드별 최적화용)"""
@@ -590,14 +608,17 @@ class TeleNewsBot:
             if not self.db.is_news_sent(user_id, keyword, news['url']):
                 new_news.append(news)
         
-        # 새 뉴스를 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
+        # 새 뉴스를 중요도순 → 날짜순으로 정렬
         if new_news:
-            new_news = self._sort_news_by_date(new_news)
+            new_news = self._sort_news_by_importance(new_news)
         
         # 새 뉴스가 있으면 전송
         if new_news:
+            # 총 관련 기사 수 계산
+            total_similar = sum(news.get('similar_count', 1) for news in new_news)
+            
             message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
-            message += f"총 {len(new_news)}개\n"
+            message += f"총 {len(new_news)}개 (관련 기사 총 {total_similar}건)\n"
             message += "━━━━━━━━━━━━━━━━━━━━\n\n"
             
             for i, news in enumerate(new_news, 1):
@@ -605,9 +626,19 @@ class TeleNewsBot:
                 source = news['source']
                 date = self._format_date_simple(news['date'])
                 url = news['url']
+                similar_count = news.get('similar_count', 1)
                 
-                # 제목을 크고 강조
-                message += f"<a href='{url}'><b>🔹 {title}</b></a>\n\n"
+                # 뉴스 아이콘 결정
+                icon = self._get_news_icon(news)
+                
+                # 제목 (아이콘 + 제목)
+                message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+                
+                # 관련뉴스 개수 표시 (1건은 표시 안함)
+                if similar_count > 1 or icon == '⭐':
+                    message += f" [관련뉴스: {similar_count}건]"
+                
+                message += "\n\n"
                 
                 # 부가 정보는 작고 덜 눈에 띄게
                 message += f"<code>{source}, {date}</code>\n"
@@ -700,21 +731,35 @@ class TeleNewsBot:
         
         elif manual_check:
             # 수동 확인 시 새 뉴스가 없으면 최신 뉴스 표시 (이미 본 뉴스)
+            # 중요도순으로 정렬
+            sorted_news_list = self._sort_news_by_importance(news_list)
+            total_similar = sum(news.get('similar_count', 1) for news in sorted_news_list)
+            
             message = f"📰 <b>최신 뉴스</b> (키워드: {keyword})\n"
             message += f"💡 <i>이미 확인한 뉴스입니다</i>\n"
-            message += f"총 {len(news_list)}개\n"
+            message += f"총 {len(sorted_news_list)}개 (관련 기사 총 {total_similar}건)\n"
             message += "━━━━━━━━━━━━━━━━━━━━\n\n"
             
-            for i, news in enumerate(news_list, 1):
+            for i, news in enumerate(sorted_news_list, 1):
                 title = news['title']
                 source = news['source']
                 date = self._format_date_simple(news['date'])
                 url = news['url']
+                similar_count = news.get('similar_count', 1)
                 
-                # 제목을 크고 강조
-                message += f"<a href='{url}'><b>🔹 {title}</b></a>\n\n"
+                # 뉴스 아이콘 결정
+                icon = self._get_news_icon(news)
                 
-                # 부가 정보는 작고 덜 눈에 띄게 (코드 블록 스타일)
+                # 제목 (아이콘 + 제목)
+                message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+                
+                # 관련뉴스 개수 표시
+                if similar_count > 1 or icon == '⭐':
+                    message += f" [관련뉴스: {similar_count}건]"
+                
+                message += "\n\n"
+                
+                # 부가 정보는 작고 덜 눈에 띄게
                 message += f"<code>{source}, {date}</code>\n"
                 message += "────────────────────\n\n"
             

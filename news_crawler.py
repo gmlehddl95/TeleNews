@@ -196,33 +196,78 @@ class NaverNewsCrawler:
         if not news_list:
             return []
         
-        filtered_news = []
+        # 1단계: 유사한 뉴스들을 그룹화
+        groups = []  # [{'representative': news, 'similar': [news1, news2, ...]}, ...]
         
         for news in news_list:
-            is_duplicate = False
-            similar_to_idx = -1
+            found_group = False
             
-            # 이미 선택된 뉴스들과 비교
-            for idx, selected in enumerate(filtered_news):
-                similarity = self.calculate_similarity(news['title'], selected['title'])
+            # 기존 그룹들과 유사도 비교
+            for group in groups:
+                representative = group['representative']
+                similarity = self.calculate_similarity(news['title'], representative['title'])
                 
-                # 유사도가 threshold 이상이면 중복으로 간주
+                # 유사도가 threshold 이상이면 같은 그룹
                 if similarity >= similarity_threshold:
-                    is_duplicate = True
-                    similar_to_idx = idx
-                    print(f"[DEBUG] 유사 뉴스 제외 (유사도 {similarity:.2f}): {news['title']}")
+                    group['similar'].append(news)
+                    found_group = True
+                    print(f"[DEBUG] 유사 뉴스 그룹화 (유사도 {similarity:.2f}): {news['title']}")
                     break
             
-            # 중복이 아니면 추가 (유사 개수 1로 초기화)
-            if not is_duplicate:
-                news['similar_count'] = 1
-                filtered_news.append(news)
+            # 새로운 그룹 생성
+            if not found_group:
+                groups.append({
+                    'representative': news,
+                    'similar': [news]  # 자기 자신도 포함
+                })
+        
+        # 2단계: 각 그룹에서 최적의 대표 뉴스 선택
+        filtered_news = []
+        
+        for group in groups:
+            all_similar = group['similar']
+            
+            # 우선순위 1: 네이버 뉴스(news.naver.com) 중 가장 최신
+            naver_news = [n for n in all_similar if 'news.naver.com' in n.get('url', '')]
+            
+            if naver_news:
+                # 네이버 뉴스 중 가장 최신 선택
+                representative = self._get_latest_news(naver_news)
+                print(f"[DEBUG] 대표 선택 (네이버 뉴스): {representative['title']}")
             else:
-                # 중복이면 대표 뉴스의 similar_count 증가
-                filtered_news[similar_to_idx]['similar_count'] = filtered_news[similar_to_idx].get('similar_count', 1) + 1
+                # 우선순위 2: 전체 중 가장 최신
+                representative = self._get_latest_news(all_similar)
+                print(f"[DEBUG] 대표 선택 (최신): {representative['title']}")
+            
+            # 유사 뉴스 개수 추가
+            representative['similar_count'] = len(all_similar)
+            filtered_news.append(representative)
         
         print(f"[DEBUG] 유사 뉴스 필터링: {len(news_list)}개 → {len(filtered_news)}개")
         return filtered_news
+    
+    def _get_latest_news(self, news_list):
+        """뉴스 리스트에서 가장 최신 뉴스 반환"""
+        if not news_list:
+            return None
+        
+        try:
+            def parse_date(news):
+                try:
+                    date_str = news['date']
+                    if '+' in date_str or '-' in date_str:
+                        return datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
+                    else:
+                        return datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S')
+                except:
+                    return datetime.min
+            
+            # 날짜순 정렬 (최신 우선)
+            sorted_list = sorted(news_list, key=parse_date, reverse=True)
+            return sorted_list[0]
+        except:
+            # 파싱 실패 시 첫 번째 반환
+            return news_list[0]
     
     def search_news(self, keyword, max_results=10):
         """

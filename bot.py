@@ -827,12 +827,13 @@ class TeleNewsBot:
             return news_list
     
     def _get_news_icon(self, news):
-        """뉴스 아이콘 결정 (유사 개수 및 단독 여부 기반)"""
+        """뉴스 아이콘 결정 (유사 개수 및 특수 키워드 기반)"""
         title = news.get('title', '')
         similar_count = news.get('similar_count', 1)
         
-        # 제목에 [단독] 또는 "단독" 포함 시 별표
-        if '[단독]' in title or '(단독)' in title or '"단독"' in title:
+        # 제목에 [단독], [속보], [긴급] 또는 (단독), (속보), (긴급) 포함 시 별표
+        special_keywords = ['[단독]', '[속보]', '[긴급]', '(단독)', '(속보)', '(긴급)']
+        if any(keyword in title for keyword in special_keywords):
             return '⭐'
         
         # 유사 개수에 따른 아이콘
@@ -882,8 +883,12 @@ class TeleNewsBot:
                 # 제목 (아이콘 + 제목)
                 message += f"<a href='{url}'><b>{icon} {title}</b></a>"
                 
-                # 관련뉴스 개수 표시 (1건은 표시 안함)
-                if similar_count > 1 or icon == '⭐':
+                # 관련뉴스 개수 표시
+                # ⭐(단독/속보/긴급)는 2건 이상일 때만, 다른 아이콘은 2건 이상일 때 표시
+                if icon == '⭐':
+                    if similar_count >= 2:
+                        message += f" [관련뉴스: {similar_count}건]"
+                elif similar_count > 1:
                     message += f" [관련뉴스: {similar_count}건]"
                 
                 message += "\n\n"
@@ -969,8 +974,12 @@ class TeleNewsBot:
                 # 제목 (아이콘 + 제목)
                 message += f"<a href='{url}'><b>{icon} {title}</b></a>"
                 
-                # 관련뉴스 개수 표시 (1건은 표시 안함)
-                if similar_count > 1 or icon == '⭐':
+                # 관련뉴스 개수 표시
+                # ⭐(단독/속보/긴급)는 2건 이상일 때만, 다른 아이콘은 2건 이상일 때 표시
+                if icon == '⭐':
+                    if similar_count >= 2:
+                        message += f" [관련뉴스: {similar_count}건]"
+                elif similar_count > 1:
                     message += f" [관련뉴스: {similar_count}건]"
                 
                 message += "\n\n"
@@ -1015,7 +1024,11 @@ class TeleNewsBot:
                 message += f"<a href='{url}'><b>{icon} {title}</b></a>"
                 
                 # 관련뉴스 개수 표시
-                if similar_count > 1 or icon == '⭐':
+                # ⭐(단독/속보/긴급)는 2건 이상일 때만, 다른 아이콘은 2건 이상일 때 표시
+                if icon == '⭐':
+                    if similar_count >= 2:
+                        message += f" [관련뉴스: {similar_count}건]"
+                elif similar_count > 1:
                     message += f" [관련뉴스: {similar_count}건]"
                 
                 message += "\n\n"

@@ -195,7 +195,7 @@ class TeleNewsBot:
                 "• <code>속보 and 삼성</code> - 속보와 삼성 모두 포함\n"
                 "• <code>삼성 or 애플</code> - 삼성 또는 애플 중 하나 이상\n"
                 "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n"
-                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n\n"
+                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n"
                 "💡 and/or는 영어 소문자로 입력", 
                 parse_mode='HTML')
     
@@ -518,9 +518,10 @@ class TeleNewsBot:
                 "예시: 삼성전자, AI, 나스닥\n"
                 "💡 콤마(,)로 구분하여 여러 개 동시 입력 가능\n\n"
                 "🔹 <b>논리 연산 (AND/OR)</b>\n"
-                "• <code>속보 and 삼성</code> - 둘 다 포함\n"
-                "• <code>삼성 or 애플</code> - 둘 중 하나 이상\n"
-                "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n\n"
+                "• <code>속보 and 삼성</code> - 속보와 삼성 모두 포함\n"
+                "• <code>삼성 or 애플</code> - 삼성 또는 애플 중 하나 이상\n"
+                "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n"
+                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n"
                 "💡 and/or는 영어 소문자로 입력",
                 parse_mode='HTML'
             )

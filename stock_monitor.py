@@ -20,7 +20,7 @@ class StockMonitor:
         self.tqqq_cache_time = 0
         self.cache_duration = 300  # 5분 (초)
     
-    def get_nasdaq_info(self, retry_count=3, timeout=30):
+    def get_nasdaq_info(self, retry_count=3, timeout=10):
         """
         나스닥 100 현재 가격 및 전고점 대비 정보 조회 (캐싱 지원)
         :param retry_count: 재시도 횟수
@@ -92,12 +92,18 @@ class StockMonitor:
                 
                 print(f"[DEBUG] 나스닥 현재가: ${current_price:,.2f}, 전고점: ${all_time_high:,.2f} ({ath_date})")
                 
+                # 조회 시간 포함
+                from datetime import timezone, timedelta
+                kst = timezone(timedelta(hours=9))
+                query_time = datetime.now(kst)
+                
                 result = {
                     'current_price': round(current_price, 2),
                     'all_time_high': round(all_time_high, 2),
                     'ath_date': ath_date,
                     'percentage': round(percentage, 2),
-                    'drop_percentage': round(drop_percentage, 2)
+                    'drop_percentage': round(drop_percentage, 2),
+                    'query_time': query_time  # 실제 조회 시간 저장
                 }
                 
                 # 캐시에 저장
@@ -118,7 +124,7 @@ class StockMonitor:
         
         return None
     
-    def get_tqqq_info(self, retry_count=3, timeout=30):
+    def get_tqqq_info(self, retry_count=3, timeout=10):
         """
         TQQQ 현재 가격 조회 (캐싱 지원)
         :param retry_count: 재시도 횟수
@@ -184,8 +190,14 @@ class StockMonitor:
                 
                 print(f"[DEBUG] TQQQ 현재가: ${current_price:.2f}")
                 
+                # 조회 시간 포함
+                from datetime import timezone, timedelta
+                kst = timezone(timedelta(hours=9))
+                query_time = datetime.now(kst)
+                
                 result = {
-                    'current_price': round(current_price, 2)
+                    'current_price': round(current_price, 2),
+                    'query_time': query_time  # 실제 조회 시간 저장
                 }
                 
                 # 캐시에 저장
@@ -276,11 +288,17 @@ class StockMonitor:
             tqqq_info['current_price']
         )
         
-        # 날짜 포맷 (GMT+9, 한국 시간)
-        from datetime import timezone, timedelta
-        kst = timezone(timedelta(hours=9))
-        now_kst = datetime.now(kst)
-        date_str = now_kst.strftime('%Y-%m-%d %H:%M')
+        # 날짜 포맷 (캐시된 조회 시간 사용)
+        if 'query_time' in nasdaq_info:
+            # 캐시에서 가져온 경우: 실제 조회 시간 표시
+            date_str = nasdaq_info['query_time'].strftime('%Y-%m-%d %H:%M')
+        else:
+            # 캐시가 없는 경우 (하위 호환성)
+            from datetime import timezone, timedelta
+            kst = timezone(timedelta(hours=9))
+            now_kst = datetime.now(kst)
+            date_str = now_kst.strftime('%Y-%m-%d %H:%M')
+        
         ath_date_str = nasdaq_info['ath_date'].strftime('%Y-%m-%d')  # 날짜만 표시
         
         report = f"""📊 <b>주가 리포트</b> ({date_str})

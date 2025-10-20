@@ -62,8 +62,8 @@ class TeleNewsBot:
     
     async def safe_reply(self, message, text, parse_mode='HTML', reply_markup=None):
         """안전한 메시지 응답 (강화된 재시도 포함)"""
-        max_retries = 5  # 재시도 횟수 증가
-        base_delay = 3  # 기본 대기 시간 증가
+        max_retries = 3  # 재시도 횟수
+        base_delay = 2  # 기본 대기 시간
         
         for attempt in range(max_retries):
             try:
@@ -1272,8 +1272,8 @@ class TeleNewsBot:
     
     async def send_message_to_user(self, user_id, text, parse_mode='HTML'):
         """특정 사용자에게 메시지 전송 (강화된 재시도 로직)"""
-        max_retries = 5  # 재시도 횟수 증가
-        base_delay = 3  # 기본 대기 시간 증가 (초)
+        max_retries = 3  # 재시도 횟수
+        base_delay = 2  # 기본 대기 시간 (초)
         
         for attempt in range(max_retries):
             try:

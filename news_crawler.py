@@ -293,9 +293,9 @@ class NaverNewsCrawler:
             
             # 논리 연산이 있는 경우 더 많은 결과 가져오기 (필터링 후 줄어들 수 있음)
             if has_logic:
-                api_fetch_count = min(max_results * 5, 100)  # 논리 연산 시 5배
+                api_fetch_count = min(max_results * 3, 50)  # 논리 연산 시 3배
             else:
-                api_fetch_count = min(max_results * 3, 100)  # 일반 검색 시 3배
+                api_fetch_count = min(max_results * 2, 30)  # 일반 검색 시 2배
             
             # API 검색어 선택: 논리 연산이 있으면 첫 번째 키워드, 없으면 그대로
             search_query = individual_keywords[0] if has_logic else keyword
@@ -311,7 +311,7 @@ class NaverNewsCrawler:
             else:
                 print(f"[DEBUG] 네이버 API 검색: {keyword}")
             
-            response = requests.get(self.api_url, headers=headers, params=params, timeout=15)
+            response = requests.get(self.api_url, headers=headers, params=params, timeout=8)
             response.raise_for_status()
             
             data = response.json()

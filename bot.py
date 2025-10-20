@@ -225,10 +225,20 @@ class TeleNewsBot:
             # 키워드 목록 텍스트
             keyword_list = '\n'.join([f"• {kw}" for kw in keywords])
             
-            # 각 키워드마다 삭제 버튼 생성
+            # 각 키워드마다 삭제 버튼 생성 (2열로 배치)
             keyboard = []
-            for keyword in keywords:
-                keyboard.append([InlineKeyboardButton(f"🗑️ {keyword} 삭제", callback_data=f"remove:{keyword}")])
+            for i in range(0, len(keywords), 2):
+                row = []
+                # 첫 번째 키워드
+                keyword1 = keywords[i]
+                row.append(InlineKeyboardButton(f"🗑️ {keyword1}", callback_data=f"remove:{keyword1}"))
+                
+                # 두 번째 키워드 (있으면)
+                if i + 1 < len(keywords):
+                    keyword2 = keywords[i + 1]
+                    row.append(InlineKeyboardButton(f"🗑️ {keyword2}", callback_data=f"remove:{keyword2}"))
+                
+                keyboard.append(row)
             
             # 모두 삭제 및 키워드 추가 버튼
             keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
@@ -356,8 +366,13 @@ class TeleNewsBot:
                 if keywords:
                     keyword_list = '\n'.join([f"• {kw}" for kw in keywords])
                     keyboard = []
-                    for kw in keywords:
-                        keyboard.append([InlineKeyboardButton(f"🗑️ {kw} 삭제", callback_data=f"remove:{kw}")])
+                    # 키워드 버튼 2열로 배치
+                    for i in range(0, len(keywords), 2):
+                        row = []
+                        row.append(InlineKeyboardButton(f"🗑️ {keywords[i]}", callback_data=f"remove:{keywords[i]}"))
+                        if i + 1 < len(keywords):
+                            row.append(InlineKeyboardButton(f"🗑️ {keywords[i + 1]}", callback_data=f"remove:{keywords[i + 1]}"))
+                        keyboard.append(row)
                     keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
                     keyboard.append([InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")])
                     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -505,13 +520,16 @@ class TeleNewsBot:
                 logger.info(f"사용자 {user_id} - 방해금지 시간 설정: {start_time} ~ {end_time}")
         
         elif data == "add_keyword":
-            # 키워드 추가 버튼 - 메시지 ID 저장
-            self.waiting_for_keyword[user_id] = {
-                'action': 'add',
-                'message_id': query.message.message_id,
-                'chat_id': query.message.chat_id
-            }
-            await query.edit_message_text(
+            # 키워드 추가 버튼 - 새 메시지로 보내기 (기존 목록 유지)
+            await query.answer()  # 버튼 클릭 응답
+            
+            self.waiting_for_keyword[user_id] = 'add_from_list'
+            
+            # 취소 버튼 추가
+            cancel_keyboard = [[InlineKeyboardButton("❌ 취소", callback_data="cancel_add_keyword")]]
+            reply_markup = InlineKeyboardMarkup(cancel_keyboard)
+            
+            await query.message.reply_text(
                 "📝 <b>키워드 추가</b>\n\n"
                 "추가할 키워드를 입력해주세요:\n\n"
                 "🔹 <b>단순 키워드</b>\n"
@@ -523,9 +541,18 @@ class TeleNewsBot:
                 "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n"
                 "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n"
                 "💡 and/or는 영어 소문자로 입력",
-                parse_mode='HTML'
+                parse_mode='HTML',
+                reply_markup=reply_markup
             )
             logger.info(f"사용자 {user_id} - 키워드 추가 대기 모드 진입 (목록에서)")
+        
+        elif data == "cancel_add_keyword":
+            # 키워드 추가 취소
+            await query.answer("취소되었습니다")
+            if user_id in self.waiting_for_keyword:
+                del self.waiting_for_keyword[user_id]
+            await query.message.delete()
+            logger.info(f"사용자 {user_id} - 키워드 추가 취소")
     
     async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """일반 텍스트 메시지 처리 (대화형 키워드 입력 + 버튼 클릭)"""
@@ -551,11 +578,10 @@ class TeleNewsBot:
             waiting_info = self.waiting_for_keyword[user_id]
             del self.waiting_for_keyword[user_id]
             
-            # dict 형태면 목록에서 추가한 것, string이면 일반 명령어
-            is_from_list = isinstance(waiting_info, dict)
-            action = waiting_info['action'] if is_from_list else waiting_info
+            # 'add_from_list'면 목록에서 추가한 것, 'add'면 일반 명령어
+            is_from_list = (waiting_info == 'add_from_list')
             
-            if action == 'add':
+            if waiting_info == 'add' or waiting_info == 'add_from_list':
                 input_text = text.strip()
                 
                 # 콤마가 있으면 분리, 없으면 그대로 사용
@@ -564,74 +590,42 @@ class TeleNewsBot:
                 else:
                     keywords = [input_text]
                 
-                # 목록에서 추가한 경우, 원본 메시지를 업데이트
+                # 목록에서 추가한 경우
                 if is_from_list:
+                    # 사용자가 입력한 키워드 메시지 삭제
                     try:
-                        # 사용자가 입력한 키워드 메시지 삭제
-                        try:
-                            await update.message.delete()
-                        except:
-                            pass  # 삭제 실패 시 무시
-                        
-                        # 로딩 메시지로 업데이트
-                        await self.application.bot.edit_message_text(
-                            chat_id=waiting_info['chat_id'],
-                            message_id=waiting_info['message_id'],
-                            text="➕ 키워드를 추가하는 중..."
-                        )
-                        await asyncio.sleep(0.4)  # 애니메이션 효과
-                        
-                        added = []
-                        already_exist = []
-                        
-                        for keyword in keywords:
-                            if self.db.add_keyword(user_id, keyword):
-                                added.append(keyword)
-                                logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
-                            else:
-                                already_exist.append(keyword)
-                        
-                        # 업데이트된 전체 키워드 목록 가져오기
-                        all_keywords = self.db.get_keywords(user_id)
-                        
-                        if all_keywords:
-                            keyword_list = '\n'.join([f"• {kw}" for kw in all_keywords])
-                            keyboard = []
-                            for kw in all_keywords:
-                                keyboard.append([InlineKeyboardButton(f"🗑️ {kw} 삭제", callback_data=f"remove:{kw}")])
-                            keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
-                            keyboard.append([InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")])
-                            reply_markup = InlineKeyboardMarkup(keyboard)
-                            
-                            # 성공 메시지 생성
-                            result_msg = ""
-                            if added:
-                                if len(added) == 1:
-                                    result_msg = f"✅ '{added[0]}' 추가됨!"
-                                else:
-                                    result_msg = f"✅ {len(added)}개 키워드 추가됨: {', '.join(added)}"
-                            
-                            if already_exist:
-                                if result_msg:
-                                    result_msg += "\n"
-                                result_msg += f"⚠️ 이미 등록됨: {', '.join(already_exist)}"
-                            
-                            await self.application.bot.edit_message_text(
-                                chat_id=waiting_info['chat_id'],
-                                message_id=waiting_info['message_id'],
-                                text=f"{result_msg}\n\n📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 관리할 수 있습니다:",
-                                parse_mode='HTML',
-                                reply_markup=reply_markup
-                            )
+                        await update.message.delete()
+                    except:
+                        pass  # 삭제 실패 시 무시
+                    
+                    added = []
+                    already_exist = []
+                    
+                    for keyword in keywords:
+                        if self.db.add_keyword(user_id, keyword):
+                            added.append(keyword)
+                            logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
                         else:
-                            await self.application.bot.edit_message_text(
-                                chat_id=waiting_info['chat_id'],
-                                message_id=waiting_info['message_id'],
-                                text="❌ 키워드 추가 실패"
-                            )
-                    except Exception as e:
-                        logger.error(f"키워드 목록 업데이트 실패: {e}")
-                        await update.message.reply_text("❌ 키워드 추가 중 오류가 발생했습니다.")
+                            already_exist.append(keyword)
+                    
+                    # 결과 메시지 생성
+                    result_msg = ""
+                    if added:
+                        if len(added) == 1:
+                            result_msg = f"✅ '{added[0]}' 추가되었습니다!"
+                        else:
+                            result_msg = f"✅ {len(added)}개 키워드 추가:\n" + ", ".join(added)
+                    
+                    if already_exist:
+                        if result_msg:
+                            result_msg += "\n\n"
+                        if len(already_exist) == 1:
+                            result_msg += f"⚠️ '{already_exist[0]}'는 이미 등록되어 있습니다."
+                        else:
+                            result_msg += f"⚠️ {len(already_exist)}개 이미 등록됨:\n" + ", ".join(already_exist)
+                    
+                    # 결과 메시지 전송 (자동으로 사라짐)
+                    await update.message.reply_text(result_msg if result_msg else "❌ 추가할 키워드가 없습니다.")
                 
                 # 일반 명령어로 추가한 경우
                 else:

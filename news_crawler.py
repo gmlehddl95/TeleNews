@@ -298,12 +298,13 @@ class NaverNewsCrawler:
                             continue
                     
                     # 제목이 잘린 경우 (... 또는 …으로 끝나는 경우) 전체 제목 크롤링
-                    if title.endswith('...') or title.endswith('…'):
-                        full_title = self._fetch_full_title(link)
-                        if full_title:
-                            full_title = html.unescape(full_title)  # HTML 엔티티 디코딩
-                            print(f"[DEBUG] 전체 제목 가져옴: {title} → {full_title}")
-                            title = full_title
+                    # 성능 최적화를 위해 비활성화 (잘린 제목 그대로 표시)
+                    # if title.endswith('...') or title.endswith('…'):
+                    #     full_title = self._fetch_full_title(link)
+                    #     if full_title:
+                    #         full_title = html.unescape(full_title)  # HTML 엔티티 디코딩
+                    #         print(f"[DEBUG] 전체 제목 가져옴: {title} → {full_title}")
+                    #         title = full_title
                     
                     # 언론사 정보 추출 (원본 링크에서 도메인 추출)
                     source = '알 수 없음'

@@ -12,14 +12,29 @@ class StockMonitor:
         self.last_nasdaq_call = 0
         self.last_tqqq_call = 0
         self.min_interval = 10  # 최소 10초 간격
+        
+        # 캐싱 설정
+        self.nasdaq_cache = None
+        self.nasdaq_cache_time = 0
+        self.tqqq_cache = None
+        self.tqqq_cache_time = 0
+        self.cache_duration = 300  # 5분 (초)
     
     def get_nasdaq_info(self, retry_count=3, timeout=30):
         """
-        나스닥 100 현재 가격 및 전고점 대비 정보 조회
+        나스닥 100 현재 가격 및 전고점 대비 정보 조회 (캐싱 지원)
         :param retry_count: 재시도 횟수
         :param timeout: 최대 대기 시간 (초)
         :return: dict with current_price, all_time_high, percentage, drop_scenarios
         """
+        # 캐시 확인 (5분 이내 데이터가 있으면 재사용)
+        if self.nasdaq_cache and self.nasdaq_cache_time:
+            elapsed = time.time() - self.nasdaq_cache_time
+            if elapsed < self.cache_duration:
+                remaining = int(self.cache_duration - elapsed)
+                print(f"[CACHE] 나스닥 캐시 사용 (유효시간: {remaining}초 남음)")
+                return self.nasdaq_cache
+        
         # Rate limiting 체크
         elapsed = time.time() - self.last_nasdaq_call
         if elapsed < self.min_interval:
@@ -77,13 +92,20 @@ class StockMonitor:
                 
                 print(f"[DEBUG] 나스닥 현재가: ${current_price:,.2f}, 전고점: ${all_time_high:,.2f} ({ath_date})")
                 
-                return {
+                result = {
                     'current_price': round(current_price, 2),
                     'all_time_high': round(all_time_high, 2),
                     'ath_date': ath_date,
                     'percentage': round(percentage, 2),
                     'drop_percentage': round(drop_percentage, 2)
                 }
+                
+                # 캐시에 저장
+                self.nasdaq_cache = result
+                self.nasdaq_cache_time = time.time()
+                print(f"[CACHE] 나스닥 데이터 캐시 저장 ({self.cache_duration}초간 유효)")
+                
+                return result
                 
             except Exception as e:
                 print(f"❌ 나스닥 100 정보 조회 오류 (시도 {attempt + 1}): {e}")
@@ -98,11 +120,19 @@ class StockMonitor:
     
     def get_tqqq_info(self, retry_count=3, timeout=30):
         """
-        TQQQ 현재 가격 조회
+        TQQQ 현재 가격 조회 (캐싱 지원)
         :param retry_count: 재시도 횟수
         :param timeout: 최대 대기 시간 (초)
         :return: dict with current_price
         """
+        # 캐시 확인 (5분 이내 데이터가 있으면 재사용)
+        if self.tqqq_cache and self.tqqq_cache_time:
+            elapsed = time.time() - self.tqqq_cache_time
+            if elapsed < self.cache_duration:
+                remaining = int(self.cache_duration - elapsed)
+                print(f"[CACHE] TQQQ 캐시 사용 (유효시간: {remaining}초 남음)")
+                return self.tqqq_cache
+        
         # Rate limiting 체크
         elapsed = time.time() - self.last_tqqq_call
         if elapsed < self.min_interval:
@@ -154,9 +184,16 @@ class StockMonitor:
                 
                 print(f"[DEBUG] TQQQ 현재가: ${current_price:.2f}")
                 
-                return {
+                result = {
                     'current_price': round(current_price, 2)
                 }
+                
+                # 캐시에 저장
+                self.tqqq_cache = result
+                self.tqqq_cache_time = time.time()
+                print(f"[CACHE] TQQQ 데이터 캐시 저장 ({self.cache_duration}초간 유효)")
+                
+                return result
                 
             except Exception as e:
                 print(f"❌ TQQQ 정보 조회 오류 (시도 {attempt + 1}): {e}")

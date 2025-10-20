@@ -1340,21 +1340,8 @@ class TeleNewsBot:
         except Exception as e:
             logger.error(f"메시지 전송 오류: {e}")
     
-    async def heartbeat(self):
-        """스케줄러 상태 확인 (heartbeat)"""
-        logger.info("💓 봇 정상 작동 중...")
-    
     def setup_scheduler(self):
         """스케줄러 설정"""
-        # Heartbeat - 15분마다 (봇이 살아있음을 확인)
-        self.scheduler.add_job(
-            self.heartbeat,
-            'interval',
-            minutes=15,
-            id='heartbeat'
-        )
-        logger.info("Heartbeat 스케줄러 등록: 15분 간격")
-        
         # 뉴스 체크 - 주기적으로
         self.scheduler.add_job(
             self.check_news_updates,

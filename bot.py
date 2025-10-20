@@ -186,7 +186,18 @@ class TeleNewsBot:
         else:
             # 인자가 없으면 대화형 모드 시작
             self.waiting_for_keyword[user_id] = 'add'
-            await self.safe_reply(update.message, "📝 추가할 키워드를 입력해주세요:\n\n예시: 삼성전자, AI, 나스닥\n\n💡 콤마(,)로 구분하여 여러 개를 한번에 입력할 수 있습니다!")
+            await self.safe_reply(update.message, 
+                "📝 <b>추가할 키워드를 입력해주세요</b>\n\n"
+                "🔹 <b>단순 키워드</b>\n"
+                "예시: 삼성전자, AI, 나스닥\n"
+                "💡 콤마(,)로 구분하여 여러 개 동시 입력 가능\n\n"
+                "🔹 <b>논리 연산 (AND/OR)</b>\n"
+                "• <code>속보 and 삼성</code> - 속보와 삼성 모두 포함\n"
+                "• <code>삼성 or 애플</code> - 삼성 또는 애플 중 하나 이상\n"
+                "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n"
+                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n\n"
+                "💡 and/or는 영어 소문자로 입력", 
+                parse_mode='HTML')
     
     async def remove_keyword_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """키워드 제거"""
@@ -503,7 +514,14 @@ class TeleNewsBot:
             await query.edit_message_text(
                 "📝 <b>키워드 추가</b>\n\n"
                 "추가할 키워드를 입력해주세요:\n\n"
-                "예시: 삼성전자, AI, 나스닥, 경제",
+                "🔹 <b>단순 키워드</b>\n"
+                "예시: 삼성전자, AI, 나스닥\n"
+                "💡 콤마(,)로 구분하여 여러 개 동시 입력 가능\n\n"
+                "🔹 <b>논리 연산 (AND/OR)</b>\n"
+                "• <code>속보 and 삼성</code> - 둘 다 포함\n"
+                "• <code>삼성 or 애플</code> - 둘 중 하나 이상\n"
+                "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n\n"
+                "💡 and/or는 영어 소문자로 입력",
                 parse_mode='HTML'
             )
             logger.info(f"사용자 {user_id} - 키워드 추가 대기 모드 진입 (목록에서)")

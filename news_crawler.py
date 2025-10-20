@@ -14,6 +14,121 @@ class NaverNewsCrawler:
         self.client_secret = NAVER_CLIENT_SECRET
         self.api_url = "https://openapi.naver.com/v1/search/news.json"
     
+    def parse_keyword_expression(self, keyword):
+        """
+        키워드 표현식 파싱 및 추출된 키워드 목록 반환
+        예: "삼성 and 전자" -> ["삼성", "전자"]
+        예: "(속보 or 긴급) and 삼성" -> ["속보", "긴급", "삼성"]
+        
+        :param keyword: 키워드 표현식
+        :return: (원본 표현식, 추출된 키워드 리스트, 논리 연산 포함 여부)
+        """
+        # and/or가 포함되어 있는지 확인 (대소문자 무시)
+        has_logic = bool(re.search(r'\b(and|or)\b', keyword, re.IGNORECASE))
+        
+        if not has_logic:
+            # 논리 연산자가 없으면 단순 키워드
+            return (keyword, [keyword.strip()], False)
+        
+        # 괄호, and, or를 제거하고 개별 키워드만 추출
+        temp = keyword.replace('(', ' ').replace(')', ' ')
+        temp = re.sub(r'\b(and|or)\b', ' ', temp, flags=re.IGNORECASE)
+        temp = re.sub(r'\s+', ' ', temp).strip()
+        keywords = [kw.strip() for kw in temp.split() if kw.strip()]
+        
+        # 중복 제거
+        keywords = list(dict.fromkeys(keywords))
+        
+        return (keyword, keywords, True)
+    
+    def evaluate_keyword_expression(self, expression, text):
+        """
+        키워드 표현식이 텍스트를 만족하는지 평가
+        
+        :param expression: 키워드 표현식 (예: "삼성 and 전자", "(속보 or 긴급) and 삼성")
+        :param text: 확인할 텍스트 (뉴스 제목 + 설명)
+        :return: True/False
+        """
+        text_lower = text.lower()
+        
+        # 단순 키워드인 경우 (and/or 없음)
+        if not re.search(r'\b(and|or)\b', expression, re.IGNORECASE):
+            return expression.lower() in text_lower
+        
+        # 논리 연산식 평가
+        def evaluate_simple(expr):
+            """괄호 없는 단순 표현식 평가"""
+            expr = expr.strip()
+            
+            # OR 연산 (우선순위 낮음)
+            if re.search(r'\bor\b', expr, re.IGNORECASE):
+                parts = re.split(r'\bor\b', expr, flags=re.IGNORECASE)
+                return any(evaluate_simple(part.strip()) for part in parts)
+            
+            # AND 연산 (우선순위 높음)
+            elif re.search(r'\band\b', expr, re.IGNORECASE):
+                parts = re.split(r'\band\b', expr, flags=re.IGNORECASE)
+                return all(kw.strip().lower() in text_lower for kw in parts)
+            
+            # 단일 키워드
+            else:
+                return expr.lower() in text_lower
+        
+        # 괄호 처리
+        working_expr = expression
+        while '(' in working_expr:
+            match = re.search(r'\(([^()]+)\)', working_expr)
+            if match:
+                inner_expr = match.group(1)
+                result = evaluate_simple(inner_expr)
+                working_expr = working_expr[:match.start()] + ('__TRUE__' if result else '__FALSE__') + working_expr[match.end():]
+            else:
+                break
+        
+        # 최종 평가
+        def final_evaluate(expr):
+            expr = expr.strip()
+            expr = expr.replace('__TRUE__', 'True').replace('__FALSE__', 'False')
+            
+            # OR 연산
+            if re.search(r'\bor\b', expr, re.IGNORECASE):
+                parts = re.split(r'\bor\b', expr, flags=re.IGNORECASE)
+                results = []
+                for part in parts:
+                    part = part.strip()
+                    if part == 'True':
+                        results.append(True)
+                    elif part == 'False':
+                        results.append(False)
+                    else:
+                        results.append(part.lower() in text_lower)
+                return any(results)
+            
+            # AND 연산
+            elif re.search(r'\band\b', expr, re.IGNORECASE):
+                parts = re.split(r'\band\b', expr, flags=re.IGNORECASE)
+                results = []
+                for part in parts:
+                    part = part.strip()
+                    if part == 'True':
+                        results.append(True)
+                    elif part == 'False':
+                        results.append(False)
+                    else:
+                        results.append(part.lower() in text_lower)
+                return all(results)
+            
+            # 단일 값
+            else:
+                if expr == 'True':
+                    return True
+                elif expr == 'False':
+                    return False
+                else:
+                    return expr.lower() in text_lower
+        
+        return final_evaluate(working_expr)
+    
     def _fetch_full_title(self, url):
         """뉴스 링크에서 전체 제목 가져오기"""
         try:
@@ -111,8 +226,8 @@ class NaverNewsCrawler:
     
     def search_news(self, keyword, max_results=10):
         """
-        네이버 뉴스 검색 (공식 API 사용)
-        :param keyword: 검색 키워드
+        네이버 뉴스 검색 (공식 API 사용, AND/OR 논리 연산 지원)
+        :param keyword: 검색 키워드 또는 논리 표현식 (예: "삼성 and 전자", "(속보 or 긴급) and 삼성")
         :param max_results: 유사도 필터링 후 최종 반환할 최대 뉴스 수
         :return: 뉴스 리스트 [{'title': '제목', 'url': 'URL', 'source': '언론사', 'date': '날짜'}]
         """
@@ -121,6 +236,9 @@ class NaverNewsCrawler:
             print("   .env 파일에 NAVER_CLIENT_ID와 NAVER_CLIENT_SECRET를 추가하세요.")
             return []
         
+        # 키워드 표현식 파싱
+        original_expr, individual_keywords, has_logic = self.parse_keyword_expression(keyword)
+        
         try:
             # 네이버 검색 API 요청
             headers = {
@@ -128,16 +246,25 @@ class NaverNewsCrawler:
                 'X-Naver-Client-Secret': self.client_secret
             }
             
-            # 유사도 필터링을 고려해서 더 많이 가져옴 (API 최대 100개)
-            api_fetch_count = min(max_results * 3, 100)  # 최종 목표의 3배 가져오기
+            # 논리 연산이 있는 경우 더 많은 결과 가져오기 (필터링 후 줄어들 수 있음)
+            if has_logic:
+                api_fetch_count = min(max_results * 5, 100)  # 논리 연산 시 5배
+            else:
+                api_fetch_count = min(max_results * 3, 100)  # 일반 검색 시 3배
+            
+            # API 검색어 선택: 논리 연산이 있으면 첫 번째 키워드, 없으면 그대로
+            search_query = individual_keywords[0] if has_logic else keyword
             
             params = {
-                'query': keyword,
+                'query': search_query,
                 'display': api_fetch_count,  # API에서 가져올 개수
                 'sort': 'sim'  # 관련도순 정렬 (정확도 높음)
             }
             
-            print(f"[DEBUG] 네이버 API 검색: {keyword}")
+            if has_logic:
+                print(f"[DEBUG] 네이버 API 검색 (논리 연산): {original_expr} -> 검색어: {search_query}")
+            else:
+                print(f"[DEBUG] 네이버 API 검색: {keyword}")
             
             response = requests.get(self.api_url, headers=headers, params=params, timeout=15)
             response.raise_for_status()
@@ -160,6 +287,15 @@ class NaverNewsCrawler:
                     
                     if not title or not link:
                         continue
+                    
+                    # 논리 연산이 있는 경우, 표현식을 만족하는지 확인
+                    if has_logic:
+                        # 제목과 설명을 합쳐서 평가
+                        full_text = title + ' ' + description
+                        if not self.evaluate_keyword_expression(original_expr, full_text):
+                            # 표현식을 만족하지 않으면 건너뛰기
+                            print(f"[DEBUG] 논리 연산 불일치, 제외: {title}")
+                            continue
                     
                     # 제목이 잘린 경우 (... 또는 …으로 끝나는 경우) 전체 제목 크롤링
                     if title.endswith('...') or title.endswith('…'):

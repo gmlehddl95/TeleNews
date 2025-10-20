@@ -239,8 +239,11 @@ class StockMonitor:
             tqqq_info['current_price']
         )
         
-        # 날짜 포맷
-        date_str = datetime.now().strftime('%Y-%m-%d %H:%M')
+        # 날짜 포맷 (GMT+9, 한국 시간)
+        from datetime import timezone, timedelta
+        kst = timezone(timedelta(hours=9))
+        now_kst = datetime.now(kst)
+        date_str = now_kst.strftime('%Y-%m-%d %H:%M (GMT+9)')
         ath_date_str = nasdaq_info['ath_date'].strftime('%Y-%m-%d')  # 날짜만 표시
         
         report = f"""📊 <b>주가 리포트</b> ({date_str})

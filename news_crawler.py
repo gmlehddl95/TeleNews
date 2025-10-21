@@ -382,18 +382,20 @@ class NaverNewsCrawler:
         print(f"[DEBUG] 파싱 결과 - 원본: '{original_expr}', 키워드: {individual_keywords}, 논리연산: {has_logic}")
         
         # OR 연산이 있는지 확인
-        has_or = has_logic and re.search(r'\bor\b', keyword, re.IGNORECASE)
-        print(f"[DEBUG] OR 연산 감지: {has_or}")
+        has_or = has_logic and bool(re.search(r'\bor\b', keyword, re.IGNORECASE))
+        print(f"[DEBUG] OR 연산 감지: {has_or}, has_logic={has_logic}, keyword='{keyword}'")
         
         # OR 연산이 있는 경우, 각 키워드로 개별 검색하여 합침
         if has_or:
-            print(f"[DEBUG] OR 연산 감지: {original_expr}")
+            print(f"[DEBUG] ===== OR 연산 모드 시작 =====")
+            print(f"[DEBUG] 원본 표현식: {original_expr}")
+            print(f"[DEBUG] 개별 키워드: {individual_keywords}")
             all_news = []
             seen_urls = set()
             
-            for kw in individual_keywords:
+            for idx, kw in enumerate(individual_keywords):
                 try:
-                    print(f"[DEBUG] OR 연산 - '{kw}' 검색 중...")
+                    print(f"[DEBUG] OR 연산 [{idx+1}/{len(individual_keywords)}] - '{kw}' 검색 중...")
                     news_results = self._search_single_keyword(kw, max_results * 2)
                     
                     # 중복 제거하면서 추가

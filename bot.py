@@ -223,7 +223,7 @@ class TeleNewsBot:
                 )
         else:
             # 인자가 없으면 대화형 모드 시작
-            input_msg = await self.safe_reply(update.message, 
+            input_msg = await update.message.reply_text(
                 "📝 <b>추가할 키워드를 입력해주세요</b>\n\n"
                 "🔹 <b>단순 키워드</b>\n"
                 "예시: 삼성전자, AI, 나스닥\n"
@@ -239,9 +239,10 @@ class TeleNewsBot:
             # 대기 상태 저장 (입력 안내 메시지 ID 저장)
             self.waiting_for_keyword[user_id] = {
                 'action': 'add_direct',
-                'input_message_id': input_msg.message_id if input_msg else None,
+                'input_message_id': input_msg.message_id,
                 'chat_id': update.effective_chat.id
             }
+            logger.info(f"대화형 모드 시작, 입력 메시지 ID: {input_msg.message_id}")
     
     async def remove_keyword_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """키워드 제거"""
@@ -673,13 +674,15 @@ class TeleNewsBot:
                             pass
                         
                         # 2. 입력 안내 메시지 삭제
-                        try:
-                            await self.application.bot.delete_message(
-                                chat_id=waiting_info['chat_id'],
-                                message_id=waiting_info['input_message_id']
-                            )
-                        except:
-                            pass
+                        if 'input_message_id' in waiting_info and waiting_info['input_message_id']:
+                            try:
+                                await self.application.bot.delete_message(
+                                    chat_id=waiting_info['chat_id'],
+                                    message_id=waiting_info['input_message_id']
+                                )
+                                logger.info(f"입력 안내 메시지 삭제 성공: {waiting_info['input_message_id']}")
+                            except Exception as e:
+                                logger.error(f"입력 안내 메시지 삭제 실패: {e}")
                         
                         # 3. 키워드 추가 실행
                         added = []

@@ -300,16 +300,22 @@ class NaverNewsCrawler:
             # API 검색어 선택: 논리 연산이 있으면 첫 번째 키워드, 없으면 그대로
             search_query = individual_keywords[0] if has_logic else keyword
             
+            # 정렬 방식 결정: "단독", "속보", "긴급" 키워드가 포함되면 최신순, 아니면 관련도순
+            keywords_lower = [kw.lower() for kw in individual_keywords]
+            use_date_sort = any(kw in ['단독', '속보', '긴급'] for kw in keywords_lower)
+            sort_method = 'date' if use_date_sort else 'sim'
+            
             params = {
                 'query': search_query,
                 'display': api_fetch_count,  # API에서 가져올 개수
-                'sort': 'sim'  # 관련도순 정렬 (정확도 높음)
+                'sort': sort_method  # 단독/속보: 최신순(date), 기타: 관련도순(sim)
             }
             
+            sort_name = '최신순' if use_date_sort else '관련도순'
             if has_logic:
-                print(f"[DEBUG] 네이버 API 검색 (논리 연산): {original_expr} -> 검색어: {search_query}")
+                print(f"[DEBUG] 네이버 API 검색 (논리 연산): {original_expr} -> 검색어: {search_query}, 정렬: {sort_name}")
             else:
-                print(f"[DEBUG] 네이버 API 검색: {keyword}")
+                print(f"[DEBUG] 네이버 API 검색: {keyword}, 정렬: {sort_name}")
             
             response = requests.get(self.api_url, headers=headers, params=params, timeout=8)
             response.raise_for_status()

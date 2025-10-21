@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleNews - 바이브 코딩 실습 결과</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-sub: #111111;
+            --bg-card: #1a1a1a;
+            --cyan: #1e90ff;
+            --blue: #00bfff;
+            --blue-light: #4da6ff;
+            --white: #ffffff;
+            --gray: #a0a0a0;
+        }
+
+        .reveal {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+            background: var(--bg-dark);
+        }
+
+        .reveal .slides {
+            text-align: center;
+        }
+
+        .reveal section {
+            height: 100%;
+            padding: 40px !important;
+        }
+
+        .reveal h1 {
+            font-size: 3.2em;
+            background: linear-gradient(135deg, #1e90ff, #00bfff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            margin-bottom: 0.3em;
+        }
+
+        .reveal h2 {
+            font-size: 2.2em;
+            color: var(--cyan);
+            margin-bottom: 0.8em;
+        }
+
+        .reveal h3 {
+            font-size: 1.4em;
+            color: var(--blue);
+            margin: 0.5em 0;
+        }
+
+        .reveal p, .reveal li {
+            color: var(--white);
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin: 0.4em 0;
+        }
+
+        .subtitle {
+            color: var(--gray);
+            font-size: 1.3em;
+        }
+
+        .highlight {
+            color: var(--cyan);
+            font-weight: 600;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5em;
+            margin: 1.5em auto;
+            max-width: 1600px;
+        }
+
+        .feature-box {
+            background: var(--bg-card);
+            border: 2px solid var(--cyan);
+            border-radius: 12px;
+            padding: 1.2em;
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+
+        .feature-box:hover {
+            border-color: var(--blue-light);
+            box-shadow: 0 10px 30px rgba(30, 144, 255, 0.2);
+        }
+
+        .feature-box h3 {
+            margin: 0 0 0.5em 0;
+            font-size: 1.3em;
+        }
+
+        .feature-box p, .feature-box li {
+            font-size: 1em;
+            margin: 0.3em 0;
+        }
+
+        .chat-box {
+            background: var(--bg-card);
+            border-left: 5px solid var(--cyan);
+            border-radius: 10px;
+            padding: 1em 1.5em;
+            margin: 0.8em auto;
+            text-align: left;
+            max-width: 1400px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-msg {
+            color: var(--blue-light);
+            font-weight: 600;
+        }
+
+        .ai-msg {
+            color: var(--cyan);
+            font-weight: 600;
+        }
+
+        .code-block {
+            background: var(--bg-card);
+            border-left: 5px solid var(--cyan);
+            padding: 1em;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            text-align: left;
+            margin: 1em auto;
+            max-width: 1400px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-box {
+            display: inline-block;
+            background: var(--bg-card);
+            border: 2px solid var(--cyan);
+            border-radius: 12px;
+            padding: 0.8em 1.5em;
+            margin: 0.5em;
+            font-size: 1.2em;
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.2);
+        }
+
+        .tech-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1em;
+            margin: 1em auto;
+            max-width: 1400px;
+        }
+
+        .tech-item {
+            background: var(--bg-card);
+            border: 2px solid var(--cyan);
+            border-radius: 10px;
+            padding: 0.6em 1.2em;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .tech-item:hover {
+            border-color: var(--blue-light);
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.3);
+        }
+
+        .qr-box {
+            background: white;
+            padding: 1.5em;
+            border-radius: 15px;
+            display: inline-block;
+            box-shadow: 0 10px 40px rgba(30, 144, 255, 0.4);
+            margin: 1em 0;
+        }
+
+        .emphasis {
+            background: linear-gradient(135deg, #1e90ff, #00bfff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.6em;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        .reveal ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .reveal li {
+            padding-left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- Slide 1: 타이틀 -->
+            <section>
+                <h1>💬 TeleNews</h1>
+                <h2>텔레그램 뉴스 알림 봇</h2>
+                <p class="subtitle">바이브 코딩 실습 프로젝트 결과 발표</p>
+                <p style="margin-top: 2em; font-size: 1.3em; color: var(--cyan);">
+                    김성훈 사무관
+                </p>
+                <p style="margin-top: 1em; font-size: 1.1em; color: var(--gray);">
+                    기획재정부 | AI와 대화하며 만든 실시간 뉴스 모니터링 시스템
+                </p>
+            </section>
+
+            <!-- Slide 2: 바이브 코딩이란? -->
+            <section>
+                <h2>🤖 바이브 코딩 (Vibe Coding)</h2>
+                <div style="margin-top: 2em;">
+                    <p class="emphasis" style="margin-bottom: 1.5em;">
+                        "AI와 대화하며 프로그램 만들기"
+                    </p>
+                    <div style="font-size: 1.2em; margin-top: 2em;">
+                        <p>💬 <strong>코드 작성 X</strong> → 자연어로 요청</p>
+                        <p>🎯 <strong>구현 방법 고민 X</strong> → 원하는 기능 설명</p>
+                        <p>🔧 <strong>디버깅도 대화로</strong> → 오류 메시지 공유</p>
+                    </div>
+                    <p style="margin-top: 2em; font-size: 1.3em; color: var(--cyan);">
+                        비전공자도 실제 서비스를 만들 수 있다!
+                    </p>
+                </div>
+            </section>
+
+            <!-- Slide 3: 핵심 프롬프트 1 -->
+            <section>
+                <h2>💬 핵심 프롬프트 #1</h2>
+                <div style="margin-top: 2em;">
+                    <div class="chat-box">
+                        <p class="user-msg">👤 "텔레그램 봇 만들어줘.<br>
+                        키워드를 등록하면 10분마다 네이버 뉴스를 체크해서 알림 보내는 거야"</p>
+                    </div>
+                    <p style="margin-top: 2em; font-size: 1.2em; color: var(--gray);">
+                        → <span class="highlight">프로젝트 시작</span><br>
+                        → python-telegram-bot, 네이버 API, 스케줄러 구현
+                    </p>
+                </div>
+            </section>
+
+            <!-- Slide 4: 핵심 프롬프트 2 -->
+            <section>
+                <h2>💬 핵심 프롬프트 #2</h2>
+                <div style="margin-top: 2em;">
+                    <div class="chat-box">
+                        <p class="user-msg">👤 "중복 뉴스는 제거하고,<br>
+                        유사한 뉴스가 많을수록 중요한 뉴스니까<br>
+                        불꽃 아이콘으로 중요도 표시해줘"</p>
+                    </div>
+                    <p style="margin-top: 2em; font-size: 1.2em; color: var(--gray);">
+                        → <span class="highlight">SequenceMatcher 유사도 계산</span><br>
+                        → 🔥🔥(5건+) / 🔥(2-4건) / ⭐(단독) 자동 판별
+                    </p>
+                </div>
+            </section>
+
+            <!-- Slide 5: 핵심 프롬프트 3 -->
+            <section>
+                <h2>💬 핵심 프롬프트 #3</h2>
+                <div style="margin-top: 2em;">
+                    <div class="chat-box">
+                        <p class="user-msg">👤 "나스닥 전고점 대비 5% 이상 하락하면 알려줘.<br>
+                        그리고 앞으로 더 하락하면 TQQQ가 얼마나 떨어질지 예상가도 보여줘"</p>
+                    </div>
+                    <p style="margin-top: 2em; font-size: 1.2em; color: var(--gray);">
+                        → <span class="highlight">yfinance로 실시간 주가 추적</span><br>
+                        → 2022년 폭락 데이터 기반 레버리지 계산 알고리즘
+                    </p>
+                </div>
+            </section>
+
+            <!-- Slide 6: 핵심 프롬프트 4 -->
+            <section>
+                <h2>💬 핵심 프롬프트 #4</h2>
+                <div style="margin-top: 2em;">
+                    <div class="chat-box">
+                        <p class="user-msg">👤 "Render에 배포하려는데 계속 멈춰.<br>
+                        로컬에서는 잘 되는데 클라우드에서 안 돼"</p>
+                    </div>
+                    <p style="margin-top: 2em; font-size: 1.2em; color: var(--gray);">
+                        → <span class="highlight">yfinance API 타임아웃 문제 발견</span><br>
+                        → ThreadPoolExecutor + 재시도 로직 적용<br>
+                        → SQLite → PostgreSQL 마이그레이션
+                    </p>
+                </div>
+            </section>
+
+            <!-- Slide 7: 만든 기능 -->
+            <section>
+                <h2>✨ 구현한 주요 기능</h2>
+                <div class="feature-grid" style="margin-top: 1.5em;">
+                    <div class="feature-box">
+                        <h3>📰 뉴스 자동 알림</h3>
+                        <p>• 10분마다 키워드 뉴스 수집</p>
+                        <p>• 중복 제거 (유사도 50%)</p>
+                        <p>• 중요도 자동 판별 🔥🔥/🔥/⭐</p>
+                        <p>• 최신순 정렬 전송</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>📊 주가 하락 알림</h3>
+                        <p>• 나스닥 100 전고점 추적</p>
+                        <p>• 5% 이상 하락 시 즉시 알림</p>
+                        <p>• TQQQ 예상가 9단계 제공</p>
+                        <p>• 2022년 실제 데이터 기반</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>🔕 방해금지 시간</h3>
+                        <p>• 취침 시간 알림 차단</p>
+                        <p>• 한국 시간(KST) 지원</p>
+                        <p>• 해제 시 밀린 알림 전송</p>
+                        <p>• 실시간 상태 확인</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>🎨 UX 최적화</h3>
+                        <p>• 버튼 기반 인터페이스</p>
+                        <p>• 로딩 애니메이션</p>
+                        <p>• 실시간 목록 업데이트</p>
+                        <p>• 콤마로 다중 입력</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 8: 기술 스택 -->
+            <section>
+                <h2>🛠️ 사용 기술</h2>
+                <div style="margin-top: 1.5em;">
+                    <div class="tech-grid">
+                        <div class="tech-item">🐍 Python 3.13</div>
+                        <div class="tech-item">📬 python-telegram-bot</div>
+                        <div class="tech-item">📰 네이버 뉴스 API</div>
+                        <div class="tech-item">📈 yfinance</div>
+                        <div class="tech-item">🌐 BeautifulSoup</div>
+                        <div class="tech-item">⏰ APScheduler</div>
+                        <div class="tech-item">🐘 PostgreSQL</div>
+                        <div class="tech-item">☁️ Render</div>
+                        <div class="tech-item">🚂 Railway</div>
+                    </div>
+                </div>
+                <p style="margin-top: 2em; font-size: 1.2em;">
+                    💾 <strong>코드:</strong> 1,400+ 줄 | 
+                    📝 <strong>커밋:</strong> 60+ 개 | 
+                    ⏱️ <strong>개발:</strong> 지속적 개선
+                </p>
+            </section>
+
+            <!-- Slide 9: 핵심 알고리즘 1 -->
+            <section>
+                <h2>💻 핵심 구현 #1: 유사뉴스 필터링</h2>
+                <div class="code-block" style="font-size: 1.1em; margin-top: 1.5em;">
+                    <strong style="color: var(--cyan);">SequenceMatcher 기반 유사도 계산</strong><br><br>
+                    1️⃣ 제목에서 HTML 태그 제거<br>
+                    2️⃣ 특수문자 정규화<br>
+                    3️⃣ 유사도 계산 (0.0 ~ 1.0)<br>
+                    4️⃣ 0.5 이상이면 중복으로 판단<br>
+                    5️⃣ 대표 뉴스의 similar_count 증가
+                </div>
+                <div style="margin-top: 1.5em; font-size: 1.1em;">
+                    <p><span class="highlight">결과:</span> "삼성전자 주가 상승" ≈ "삼성전자 주가 급등"</p>
+                    <p>→ 하나만 전송, [관련뉴스: 2건] 표시</p>
+                </div>
+            </section>
+
+            <!-- Slide 10: 핵심 알고리즘 2 -->
+            <section>
+                <h2>💻 핵심 구현 #2: TQQQ 예상가 계산</h2>
+                <div class="code-block" style="font-size: 1.1em; margin-top: 1.5em;">
+                    <strong style="color: var(--cyan);">2022년 실제 폭락 데이터 기반 레버리지 배수</strong><br><br>
+                    • 나스닥 20% 하락 → TQQQ 53% 하락 (2.60배)<br>
+                    • 나스닥 30% 하락 → TQQQ 75% 하락 (2.35배)<br>
+                    • 나스닥 40% 하락 → TQQQ 82% 하락 (2.15배)<br><br>
+                    <strong style="color: var(--cyan);">현재가에서 목표가까지 변화율 × 레버리지 배수</strong><br>
+                    → 예상 TQQQ 가격 산출
+                </div>
+                <p style="margin-top: 1.5em; font-size: 1.1em;">
+                    <span class="highlight">변동성 손실(Decay)</span> 반영으로 정확도 향상
+                </p>
+            </section>
+
+            <!-- Slide 11: 기술적 도전과제 -->
+            <section>
+                <h2>⚡ 해결한 기술 과제</h2>
+                <div style="margin-top: 1.5em;">
+                    <div class="stat-box">
+                        🔧 <strong>API 타임아웃</strong><br>
+                        <small>ThreadPoolExecutor + asyncio</small>
+                    </div>
+                    <div class="stat-box">
+                        💾 <strong>데이터 영구 보존</strong><br>
+                        <small>SQLite → PostgreSQL</small>
+                    </div>
+                    <div class="stat-box">
+                        🌐 <strong>무료 호스팅</strong><br>
+                        <small>Flask + UptimeRobot</small>
+                    </div>
+                    <div class="stat-box">
+                        🕐 <strong>시간대 처리</strong><br>
+                        <small>UTC → KST 변환</small>
+                    </div>
+                    <div class="stat-box">
+                        🔁 <strong>중복 알림 방지</strong><br>
+                        <small>DB 상태 관리</small>
+                    </div>
+                    <div class="stat-box">
+                        📱 <strong>UX 최적화</strong><br>
+                        <small>애니메이션 효과</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 12: 문제 해결 사례 -->
+            <section>
+                <h2>🔧 문제 해결 사례</h2>
+                <div style="margin-top: 1em;">
+                    <div class="chat-box" style="margin: 0.6em auto;">
+                        <p class="user-msg">👤 "봇이 자꾸 멈춰요"</p>
+                        <p class="ai-msg">🤖 yfinance API가 무한 대기 → 30초 타임아웃 + 재시도 3회 적용</p>
+                    </div>
+                    <div class="chat-box" style="margin: 0.6em auto;">
+                        <p class="user-msg">👤 "Render에서 데이터가 날아가요"</p>
+                        <p class="ai-msg">🤖 Ephemeral 파일시스템 → Railway PostgreSQL로 영구 보존</p>
+                    </div>
+                    <div class="chat-box" style="margin: 0.6em auto;">
+                        <p class="user-msg">👤 "웹 서버는 15분 후 슬립 상태로 바뀌잖아?"</p>
+                        <p class="ai-msg">🤖 UptimeRobot이 5분마다 핑 → 깨어있는 상태 유지</p>
+                    </div>
+                    <div class="chat-box" style="margin: 0.6em auto;">
+                        <p class="user-msg">👤 "현재 시간을 9시간 늦게 인식해요"</p>
+                        <p class="ai-msg">🤖 UTC 기준 → timezone(timedelta(hours=9))로 KST 적용</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 13: 시스템 구조 -->
+            <section>
+                <h2>📐 시스템 아키텍처</h2>
+                <div class="code-block" style="font-size: 1.3em; text-align: center; margin-top: 2em;">
+                    <strong style="color: var(--cyan);">사용자 (텔레그램)</strong><br>
+                    ↕️<br>
+                    <strong style="color: var(--blue);">TeleNews Bot (Render)</strong><br>
+                    ↙️ &nbsp;&nbsp;&nbsp; ↓ &nbsp;&nbsp;&nbsp; ↘️<br>
+                    네이버 API &nbsp;&nbsp; yfinance &nbsp;&nbsp; PostgreSQL<br>
+                    <br>
+                    <strong style="color: var(--cyan);">보조 시스템</strong><br>
+                    Flask Web + UptimeRobot (슬립 방지)
+                </div>
+                <p style="margin-top: 1.5em; font-size: 1.1em;">
+                    🔄 모든 인프라 무료 운영 (Render, Railway, GitHub)
+                </p>
+            </section>
+
+            <!-- Slide 14: 바이브 코딩의 장점 -->
+            <section>
+                <h2>🎯 바이브 코딩으로 얻은 것</h2>
+                <div class="feature-grid" style="margin-top: 1.5em;">
+                    <div class="feature-box">
+                        <h3>⚡ 빠른 개발</h3>
+                        <p>• 구현 방법 검색 시간 ↓</p>
+                        <p>• 바로 코드 작성 시작</p>
+                        <p>• 실시간 디버깅 지원</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>📚 학습 효과</h3>
+                        <p>• 코드 설명을 듣고 이해</p>
+                        <p>• 왜 그렇게 하는지 질문</p>
+                        <p>• 개념을 자연스럽게 습득</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>🔧 문제 해결</h3>
+                        <p>• 오류 메시지 공유 즉시 해결</p>
+                        <p>• 여러 해결책 비교 가능</p>
+                        <p>• 최적 방법 선택</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>🚀 완성도</h3>
+                        <p>• 프로덕션 레벨 코드</p>
+                        <p>• 에러 처리, 로깅 완비</p>
+                        <p>• 실제 서비스 가능</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 15: 개발 결과 -->
+            <section>
+                <h2>📊 개발 결과</h2>
+                <div style="margin-top: 2em;">
+                    <div style="font-size: 1.3em; margin-bottom: 2em;">
+                        <div class="stat-box" style="font-size: 1.3em;">
+                            📝 <strong style="color: var(--cyan);">60+</strong> 커밋
+                        </div>
+                        <div class="stat-box" style="font-size: 1.3em;">
+                            📄 <strong style="color: var(--cyan);">1,400+</strong> 줄
+                        </div>
+                        <div class="stat-box" style="font-size: 1.3em;">
+                            🔧 <strong style="color: var(--cyan);">10+</strong> 기능
+                        </div>
+                    </div>
+                    <div style="font-size: 1.2em;">
+                        <p>✅ 실제 작동하는 24/7 서비스</p>
+                        <p>✅ 클라우드 배포 완료</p>
+                        <p>✅ 지속적인 개선 중</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 16: 느낀 점 -->
+            <section>
+                <h2>💭 프로젝트 소감</h2>
+                <div style="margin-top: 2em; font-size: 1.2em; max-width: 1200px; text-align: left; margin-left: auto; margin-right: auto;">
+                    <p style="margin-bottom: 1em;">💡 <strong>시작:</strong> 비전공자도 AI와 대화하면 만들 수 있다</p>
+                    <p style="margin-bottom: 1em;">🎯 <strong>핵심:</strong> 코드 문법보다 "무엇을 만들지" 구체화가 중요</p>
+                    <p style="margin-bottom: 1em;">🔧 <strong>실전:</strong> 문제가 생기면 대화로 즉시 해결</p>
+                    <p style="margin-bottom: 1em;">📈 <strong>성장:</strong> 개념을 자연스럽게 습득하며 개발</p>
+                    <p style="margin-top: 2em; text-align: center; color: var(--cyan); font-size: 1.3em;">
+                        "바이브 코딩 = 비전공자의 개발 진입 장벽 완전 제거"
+                    </p>
+                </div>
+            </section>
+
+            <!-- Slide 17: QR Code -->
+            <section>
+                <h2>🌐 프로젝트 자세히 보기</h2>
+                <div style="margin-top: 1.5em;">
+                    <p style="font-size: 1.4em; margin-bottom: 1em;">
+                        프로젝트 홈페이지
+                    </p>
+                    <div class="qr-box">
+                        <div id="qrcode"></div>
+                    </div>
+                    <p style="margin-top: 1.5em; font-size: 1.2em;">
+                        <a href="https://gmlehddl95.github.io/telenews-website/" style="color: var(--cyan); text-decoration: none;">
+                            https://gmlehddl95.github.io/telenews-website/
+                        </a>
+                    </p>
+                    <p style="margin-top: 1em; font-size: 1em; color: var(--gray);">
+                        📱 QR 코드를 스캔하거나 링크를 방문하세요<br>
+                        🤖 텔레그램 봇 @MoEFNews 직접 사용 가능
+                    </p>
+                </div>
+            </section>
+
+            <!-- Slide 18: Thank You -->
+            <section>
+                <h1>🙏 감사합니다</h1>
+                <div style="margin-top: 2em;">
+                    <h2>TeleNews</h2>
+                    <p class="subtitle">바이브 코딩 실습 프로젝트</p>
+                    <p style="margin-top: 1.5em; font-size: 1.4em; color: var(--cyan);">
+                        김성훈 사무관
+                    </p>
+                    <p style="margin-top: 0.5em; font-size: 1.1em; color: var(--gray);">
+                        기획재정부
+                    </p>
+                    <div style="margin-top: 2em; font-size: 1.1em;">
+                        <p>🌐 <a href="https://gmlehddl95.github.io/telenews-website/" style="color: var(--cyan); text-decoration: none;">gmlehddl95.github.io/telenews-website</a></p>
+                        <p>💻 github.com/gmlehddl95/TeleNews</p>
+                    </div>
+                    <p style="margin-top: 2em; font-size: 1.4em; color: var(--cyan); font-style: italic;">
+                        "AI와 대화하며, 누구나 개발자가 될 수 있다"
+                    </p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <div style="position: fixed; bottom: 15px; right: 25px; font-size: 0.8em; color: var(--gray);">
+        → / ← 로 이동 | ESC로 전체 보기
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            transition: 'slide',
+            transitionSpeed: 'default',
+            backgroundTransition: 'fade',
+            controls: true,
+            progress: true,
+            center: true,
+            width: 1920,
+            height: 1080,
+            margin: 0.04,
+            minScale: 0.2,
+            maxScale: 2.0,
+            slideNumber: 'c/t',
+            keyboard: true,
+            overview: true,
+            touch: true,
+            loop: false,
+            fragments: false,
+            embedded: false,
+            help: true,
+            
+            // PDF 출력 최적화
+            pdfMaxPagesPerSlide: 1,
+            pdfSeparateFragments: false,
+            showNotes: false
+        });
+
+        // QR 코드 생성
+        let qrGenerated = false;
+        
+        Reveal.on('slidechanged', event => {
+            if (event.indexh === 10 && !qrGenerated) { // QR 슬라이드
+                const qrcodeContainer = document.getElementById('qrcode');
+                if (qrcodeContainer) {
+                    qrcodeContainer.innerHTML = ''; // 기존 QR 코드 제거
+                    new QRCode(qrcodeContainer, {
+                        text: "https://gmlehddl95.github.io/telenews-website/",
+                        width: 280,
+                        height: 280,
+                        colorDark: "#0a0a0a",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    qrGenerated = true;
+                }
+            }
+        });
+
+        // 페이지 로드 시 QR 코드 미리 생성
+        Reveal.on('ready', event => {
+            setTimeout(() => {
+                const currentSlide = Reveal.getCurrentSlide();
+                Reveal.slide(10);
+                setTimeout(() => {
+                    Reveal.slide(0);
+                }, 200);
+            }, 500);
+        });
+    </script>
+</body>
+</html>

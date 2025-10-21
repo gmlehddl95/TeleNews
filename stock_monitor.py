@@ -18,7 +18,7 @@ class StockMonitor:
         self.nasdaq_cache_time = 0
         self.tqqq_cache = None
         self.tqqq_cache_time = 0
-        self.cache_duration = 300  # 5분 (초)
+        self.cache_duration = 60  # 1분 (초)
     
     def get_nasdaq_info(self, retry_count=3, timeout=10):
         """

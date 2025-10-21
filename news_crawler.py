@@ -390,6 +390,9 @@ class NaverNewsCrawler:
             print(f"[DEBUG] ===== OR 연산 모드 시작 =====")
             print(f"[DEBUG] 원본 표현식: {original_expr}")
             print(f"[DEBUG] 개별 키워드: {individual_keywords}")
+            
+            # 키워드별로 뉴스 수집 및 필터링
+            keyword_news = {}  # {keyword: [filtered_news_list]}
             all_news = []
             seen_urls = set()
             
@@ -398,18 +401,26 @@ class NaverNewsCrawler:
                     print(f"[DEBUG] OR 연산 [{idx+1}/{len(individual_keywords)}] - '{kw}' 검색 중...")
                     news_results = self._search_single_keyword(kw, max_results * 2)
                     
+                    # 유사 뉴스 필터링 (각 키워드별로)
+                    filtered = self.filter_similar_news(news_results, similarity_threshold=0.55)
+                    
                     # 중복 제거하면서 추가
-                    for news in news_results:
+                    unique_filtered = []
+                    for news in filtered:
                         if news['url'] not in seen_urls:
+                            news['_keyword'] = kw  # 어느 키워드에서 온 뉴스인지 표시
                             all_news.append(news)
+                            unique_filtered.append(news)
                             seen_urls.add(news['url'])
                     
-                    print(f"[DEBUG] OR 연산 - '{kw}': {len(news_results)}개 수집, 총 {len(all_news)}개")
+                    keyword_news[kw] = unique_filtered
+                    print(f"[DEBUG] OR 연산 - '{kw}': {len(news_results)}개 수집 → {len(filtered)}개 필터링 → {len(unique_filtered)}개 중복제거")
                 except Exception as e:
                     print(f"[DEBUG] '{kw}' 검색 중 오류: {e}")
+                    keyword_news[kw] = []
                     continue
             
-            # AND도 함께 있는 복합 표현식인 경우만 필터링
+            # AND도 함께 있는 복합 표현식인 경우만 추가 필터링
             has_and = re.search(r'\band\b', keyword, re.IGNORECASE)
             
             if has_and:
@@ -421,15 +432,57 @@ class NaverNewsCrawler:
                         filtered_news.append(news)
                 
                 print(f"[DEBUG] 복합 OR+AND 필터링: {len(all_news)}개 → {len(filtered_news)}개")
-            else:
-                # 단순 OR (예: "삼성 or 애플")은 이미 각 키워드로 검색했으므로 필터링 불필요
-                filtered_news = all_news
-                print(f"[DEBUG] 단순 OR 연산: {len(all_news)}개 수집 (필터링 없음)")
+                # 복합 표현식의 경우 앞에서부터 max_results개 반환
+                return filtered_news[:max_results]
             
-            # 유사 뉴스 필터링
-            final_news = self.filter_similar_news(filtered_news, similarity_threshold=0.55)
-            print(f"[DEBUG] 유사 뉴스 필터링 후: {len(final_news)}개")
-            return final_news[:max_results]
+            # 단순 OR: 비율에 맞게 분배
+            print(f"[DEBUG] 단순 OR 연산: 총 {len(all_news)}개 수집")
+            
+            # 각 키워드별 개수 계산
+            total_count = sum(len(news_list) for news_list in keyword_news.values())
+            
+            if total_count == 0:
+                return []
+            
+            # 비율에 맞게 각 키워드에서 가져올 개수 계산
+            result_news = []
+            allocated = {}
+            
+            for kw, news_list in keyword_news.items():
+                if not news_list:
+                    allocated[kw] = 0
+                    continue
+                
+                # 비율 계산: (해당 키워드 개수 / 전체 개수) * max_results
+                ratio = len(news_list) / total_count
+                take_count = int(ratio * max_results)
+                
+                # 최소 1개는 보장 (뉴스가 있는 경우)
+                if take_count == 0 and len(news_list) > 0:
+                    take_count = 1
+                
+                allocated[kw] = take_count
+                print(f"[DEBUG] '{kw}': {len(news_list)}개 중 {take_count}개 선택 (비율: {ratio:.2%})")
+            
+            # 할당된 개수의 합이 max_results보다 작으면 나머지를 가장 많은 키워드에 추가
+            total_allocated = sum(allocated.values())
+            if total_allocated < max_results:
+                # 가장 많은 뉴스를 가진 키워드 찾기
+                max_kw = max(keyword_news.keys(), key=lambda k: len(keyword_news[k]))
+                remaining = max_results - total_allocated
+                if len(keyword_news[max_kw]) >= allocated[max_kw] + remaining:
+                    allocated[max_kw] += remaining
+                    print(f"[DEBUG] 남은 {remaining}개를 '{max_kw}'에 추가")
+            
+            # 비율에 맞게 뉴스 선택
+            for kw, take_count in allocated.items():
+                news_list = keyword_news[kw]
+                selected = news_list[:take_count]
+                result_news.extend(selected)
+                print(f"[DEBUG] '{kw}'에서 {len(selected)}개 추가")
+            
+            print(f"[DEBUG] 최종 선택: {len(result_news)}개")
+            return result_news[:max_results]  # 혹시 모를 초과 방지
         
         # AND만 있거나 논리 연산이 없는 경우 (기존 로직)
         

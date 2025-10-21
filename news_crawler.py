@@ -379,9 +379,11 @@ class NaverNewsCrawler:
         
         # 키워드 표현식 파싱
         original_expr, individual_keywords, has_logic = self.parse_keyword_expression(keyword)
+        print(f"[DEBUG] 파싱 결과 - 원본: '{original_expr}', 키워드: {individual_keywords}, 논리연산: {has_logic}")
         
         # OR 연산이 있는지 확인
         has_or = has_logic and re.search(r'\bor\b', keyword, re.IGNORECASE)
+        print(f"[DEBUG] OR 연산 감지: {has_or}")
         
         # OR 연산이 있는 경우, 각 키워드로 개별 검색하여 합침
         if has_or:
@@ -405,17 +407,26 @@ class NaverNewsCrawler:
                     print(f"[DEBUG] '{kw}' 검색 중 오류: {e}")
                     continue
             
-            # 논리 표현식에 맞는 뉴스만 필터링
-            filtered_news = []
-            for news in all_news:
-                full_text = news['title'] + ' ' + news.get('description', '')
-                if self.evaluate_keyword_expression(original_expr, full_text):
-                    filtered_news.append(news)
+            # AND도 함께 있는 복합 표현식인 경우만 필터링
+            has_and = re.search(r'\band\b', keyword, re.IGNORECASE)
             
-            print(f"[DEBUG] OR 연산 후 필터링: {len(all_news)}개 → {len(filtered_news)}개")
+            if has_and:
+                # 복합 표현식 (예: "(속보 or 긴급) and 삼성")은 필터링 필요
+                filtered_news = []
+                for news in all_news:
+                    full_text = news['title'] + ' ' + news.get('description', '')
+                    if self.evaluate_keyword_expression(original_expr, full_text):
+                        filtered_news.append(news)
+                
+                print(f"[DEBUG] 복합 OR+AND 필터링: {len(all_news)}개 → {len(filtered_news)}개")
+            else:
+                # 단순 OR (예: "삼성 or 애플")은 이미 각 키워드로 검색했으므로 필터링 불필요
+                filtered_news = all_news
+                print(f"[DEBUG] 단순 OR 연산: {len(all_news)}개 수집 (필터링 없음)")
             
             # 유사 뉴스 필터링
             final_news = self.filter_similar_news(filtered_news, similarity_threshold=0.55)
+            print(f"[DEBUG] 유사 뉴스 필터링 후: {len(final_news)}개")
             return final_news[:max_results]
         
         # AND만 있거나 논리 연산이 없는 경우 (기존 로직)

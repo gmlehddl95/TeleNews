@@ -223,8 +223,7 @@ class TeleNewsBot:
                 )
         else:
             # 인자가 없으면 대화형 모드 시작
-            self.waiting_for_keyword[user_id] = 'add'
-            await self.safe_reply(update.message, 
+            input_msg = await self.safe_reply(update.message, 
                 "📝 <b>추가할 키워드를 입력해주세요</b>\n\n"
                 "🔹 <b>단순 키워드</b>\n"
                 "예시: 삼성전자, AI, 나스닥\n"
@@ -236,6 +235,13 @@ class TeleNewsBot:
                 "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n"
                 "💡 and/or는 영어 소문자로 입력", 
                 parse_mode='HTML')
+            
+            # 대기 상태 저장 (입력 안내 메시지 ID 저장)
+            self.waiting_for_keyword[user_id] = {
+                'action': 'add_direct',
+                'input_message_id': input_msg.message_id if input_msg else None,
+                'chat_id': update.effective_chat.id
+            }
     
     async def remove_keyword_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """키워드 제거"""
@@ -645,10 +651,10 @@ class TeleNewsBot:
             waiting_info = self.waiting_for_keyword[user_id]
             del self.waiting_for_keyword[user_id]
             
-            # dict 형태면 목록에서 추가한 것, string이면 일반 명령어
-            is_from_list = isinstance(waiting_info, dict)
+            # dict 형태인지 확인
+            is_dict = isinstance(waiting_info, dict)
             
-            if (is_from_list and waiting_info['action'] == 'add_from_list') or waiting_info == 'add':
+            if is_dict and waiting_info['action'] in ['add_from_list', 'add_direct']:
                 input_text = text.strip()
                 
                 # 콤마가 있으면 분리, 없으면 그대로 사용
@@ -657,8 +663,8 @@ class TeleNewsBot:
                 else:
                     keywords = [input_text]
                 
-                # 목록에서 추가한 경우
-                if is_from_list:
+                # 목록에서 추가한 경우 또는 대화형 모드
+                if is_dict:
                     try:
                         # 1. 사용자가 입력한 키워드 메시지 삭제
                         try:
@@ -715,110 +721,42 @@ class TeleNewsBot:
                             
                             if already_exist:
                                 if len(already_exist) == 1:
-                                    result_msg += f"⚠️ '{already_exist[0]}'는 이미 등록되어 있습니다.\n\n"
+                                    result_msg += f"⚠️ '{already_exist[0]}' 이미 등록되어 있습니다.\n\n"
                                 else:
                                     result_msg += f"⚠️ {len(already_exist)}개 이미 등록됨: {', '.join(already_exist)}\n\n"
                             
-                            # 6. 기존 목록 메시지를 업데이트 (애니메이션 효과)
-                            await self.application.bot.edit_message_text(
-                                chat_id=waiting_info['chat_id'],
-                                message_id=waiting_info['list_message_id'],
-                                text=f"{result_msg}📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:",
-                                parse_mode='HTML',
-                                reply_markup=reply_markup
-                            )
+                            # 6. 목록 메시지 업데이트 또는 새로 전송
+                            if waiting_info['action'] == 'add_from_list':
+                                # 목록에서 추가: 기존 목록 메시지 업데이트
+                                await self.application.bot.edit_message_text(
+                                    chat_id=waiting_info['chat_id'],
+                                    message_id=waiting_info['list_message_id'],
+                                    text=f"{result_msg}📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:",
+                                    parse_mode='HTML',
+                                    reply_markup=reply_markup
+                                )
+                            else:
+                                # 대화형 모드: 새 메시지로 전송
+                                if result_msg:
+                                    await update.message.reply_text(result_msg.strip())
+                                
+                                await update.message.reply_text(
+                                    f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:",
+                                    parse_mode='HTML',
+                                    reply_markup=reply_markup
+                                )
                         else:
-                            await self.application.bot.edit_message_text(
-                                chat_id=waiting_info['chat_id'],
-                                message_id=waiting_info['list_message_id'],
-                                text="❌ 키워드 추가 실패"
-                            )
+                            if waiting_info['action'] == 'add_from_list':
+                                await self.application.bot.edit_message_text(
+                                    chat_id=waiting_info['chat_id'],
+                                    message_id=waiting_info['list_message_id'],
+                                    text="❌ 키워드 추가 실패"
+                                )
+                            else:
+                                await update.message.reply_text("❌ 키워드 추가 실패")
                     except Exception as e:
                         logger.error(f"키워드 목록 업데이트 실패: {e}")
                         await update.message.reply_text("❌ 키워드 추가 중 오류가 발생했습니다.")
-                
-                # 일반 명령어로 추가한 경우
-                else:
-                    # 사용자가 입력한 키워드 메시지 삭제
-                    try:
-                        await update.message.delete()
-                    except:
-                        pass  # 삭제 실패 시 무시
-                    
-                    # 로딩 메시지 표시
-                    loading_msg = await update.message.reply_text(f"➕ 키워드를 추가하는 중...")
-                    await asyncio.sleep(0.4)  # 애니메이션 효과
-                    
-                    added = []
-                    already_exist = []
-                    
-                    for keyword in keywords:
-                        if self.db.add_keyword(user_id, keyword):
-                            added.append(keyword)
-                            logger.info(f"사용자 {user_id} - 키워드 추가됨: {keyword}")
-                        else:
-                            already_exist.append(keyword)
-                    
-                    # 결과 메시지 생성
-                    message = ""
-                    if added:
-                        if len(added) == 1:
-                            message += f"✅ 키워드 '{added[0]}'가 추가되었습니다!"
-                        else:
-                            message += f"✅ {len(added)}개 키워드 추가:\n"
-                            message += ", ".join(added)
-                    
-                    if already_exist:
-                        if message:
-                            message += "\n\n"
-                        if len(already_exist) == 1:
-                            message += f"⚠️ 키워드 '{already_exist[0]}'는 이미 등록되어 있습니다."
-                        else:
-                            message += f"⚠️ {len(already_exist)}개 이미 등록됨:\n"
-                            message += ", ".join(already_exist)
-                    
-                    # 로딩 메시지 삭제
-                    try:
-                        await loading_msg.delete()
-                    except:
-                        pass
-                    
-                    # 결과 메시지 표시
-                    if message:
-                        await update.message.reply_text(message)
-                    
-                    # 키워드 목록 자동 표시
-                    all_keywords = self.db.get_keywords(user_id)
-                    if all_keywords:
-                        keyword_list = '\n'.join([f"• {kw}" for kw in all_keywords])
-                        
-                        # 각 키워드마다 삭제 버튼 생성 (2열로 배치)
-                        keyboard = []
-                        for i in range(0, len(all_keywords), 2):
-                            row = []
-                            # 첫 번째 키워드
-                            keyword1 = all_keywords[i]
-                            row.append(InlineKeyboardButton(f"🗑️ {keyword1}", callback_data=f"remove:{keyword1}"))
-                            
-                            # 두 번째 키워드 (있으면)
-                            if i + 1 < len(all_keywords):
-                                keyword2 = all_keywords[i + 1]
-                                row.append(InlineKeyboardButton(f"🗑️ {keyword2}", callback_data=f"remove:{keyword2}"))
-                            
-                            keyboard.append(row)
-                        
-                        # 모두 삭제, 즉시 뉴스 확인 및 키워드 추가 버튼
-                        keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
-                        keyboard.append([InlineKeyboardButton("📰 즉시 뉴스 확인", callback_data="check_news_now")])
-                        keyboard.append([InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")])
-                        
-                        reply_markup = InlineKeyboardMarkup(keyboard)
-                        
-                        await update.message.reply_text(
-                            f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:", 
-                            parse_mode='HTML',
-                            reply_markup=reply_markup
-                        )
     
     async def check_news_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """수동으로 뉴스 확인"""

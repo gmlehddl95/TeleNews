@@ -269,6 +269,102 @@ class NaverNewsCrawler:
             # 파싱 실패 시 첫 번째 반환
             return news_list[0]
     
+    def _search_single_keyword(self, keyword, max_count=20):
+        """
+        단일 키워드로 네이버 뉴스 검색
+        :param keyword: 검색 키워드
+        :param max_count: 가져올 최대 뉴스 수
+        :return: 뉴스 리스트
+        """
+        try:
+            headers = {
+                'X-Naver-Client-Id': self.client_id,
+                'X-Naver-Client-Secret': self.client_secret
+            }
+            
+            params = {
+                'query': keyword.strip(),
+                'display': min(max_count, 30),
+                'sort': 'sim'
+            }
+            
+            response = requests.get(self.api_url, headers=headers, params=params, timeout=8)
+            response.raise_for_status()
+            
+            data = response.json()
+            news_list = []
+            
+            for item in data.get('items', []):
+                try:
+                    title = BeautifulSoup(item.get('title', ''), 'html.parser').get_text()
+                    title = html.unescape(title)
+                    
+                    description = BeautifulSoup(item.get('description', ''), 'html.parser').get_text()
+                    description = html.unescape(description)
+                    
+                    link = item.get('link', item.get('originallink', ''))
+                    original_link = item.get('originallink', '')
+                    pub_date = item.get('pubDate', '')
+                    
+                    if not title or not link:
+                        continue
+                    
+                    # 날짜 필터링: 7일 이내
+                    try:
+                        news_date = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z')
+                        now = datetime.now(news_date.tzinfo)
+                        cutoff_date = now - timedelta(days=7)
+                        
+                        if news_date < cutoff_date:
+                            continue
+                    except:
+                        pass
+                    
+                    # 언론사 정보 추출
+                    source = '알 수 없음'
+                    if original_link:
+                        try:
+                            from urllib.parse import urlparse
+                            domain = urlparse(original_link).netloc
+                            domain_map = {
+                                'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
+                                'chosun.com': '조선일보', 'joongang.co.kr': '중앙일보',
+                                'donga.com': '동아일보', 'hani.co.kr': '한겨레',
+                                'khan.co.kr': '경향신문', 'kmib.co.kr': '국민일보',
+                                'mk.co.kr': '매일경제', 'hankyung.com': '한국경제',
+                                'mt.co.kr': '머니투데이', 'edaily.co.kr': '이데일리',
+                                'kbs.co.kr': 'KBS', 'imbc.com': 'MBC', 'sbs.co.kr': 'SBS',
+                                'jtbc.co.kr': 'JTBC', 'ytn.co.kr': 'YTN'
+                            }
+                            
+                            for key, value in domain_map.items():
+                                if key in domain:
+                                    source = value
+                                    break
+                            
+                            if source == '알 수 없음':
+                                source = domain.replace('www.', '').split('.')[0].upper()
+                        except:
+                            pass
+                    
+                    news_list.append({
+                        'title': title,
+                        'url': link,
+                        'source': source,
+                        'date': pub_date,
+                        'description': description  # OR 연산 필터링용
+                    })
+                    
+                except Exception as e:
+                    print(f"[DEBUG] 항목 파싱 오류: {e}")
+                    continue
+            
+            return news_list
+            
+        except Exception as e:
+            print(f"[DEBUG] 키워드 '{keyword}' 검색 오류: {e}")
+            return []
+    
     def search_news(self, keyword, max_results=10):
         """
         네이버 뉴스 검색 (공식 API 사용, AND/OR 논리 연산 지원)
@@ -283,6 +379,46 @@ class NaverNewsCrawler:
         
         # 키워드 표현식 파싱
         original_expr, individual_keywords, has_logic = self.parse_keyword_expression(keyword)
+        
+        # OR 연산이 있는지 확인
+        has_or = has_logic and re.search(r'\bor\b', keyword, re.IGNORECASE)
+        
+        # OR 연산이 있는 경우, 각 키워드로 개별 검색하여 합침
+        if has_or:
+            print(f"[DEBUG] OR 연산 감지: {original_expr}")
+            all_news = []
+            seen_urls = set()
+            
+            for kw in individual_keywords:
+                try:
+                    print(f"[DEBUG] OR 연산 - '{kw}' 검색 중...")
+                    news_results = self._search_single_keyword(kw, max_results * 2)
+                    
+                    # 중복 제거하면서 추가
+                    for news in news_results:
+                        if news['url'] not in seen_urls:
+                            all_news.append(news)
+                            seen_urls.add(news['url'])
+                    
+                    print(f"[DEBUG] OR 연산 - '{kw}': {len(news_results)}개 수집, 총 {len(all_news)}개")
+                except Exception as e:
+                    print(f"[DEBUG] '{kw}' 검색 중 오류: {e}")
+                    continue
+            
+            # 논리 표현식에 맞는 뉴스만 필터링
+            filtered_news = []
+            for news in all_news:
+                full_text = news['title'] + ' ' + news.get('description', '')
+                if self.evaluate_keyword_expression(original_expr, full_text):
+                    filtered_news.append(news)
+            
+            print(f"[DEBUG] OR 연산 후 필터링: {len(all_news)}개 → {len(filtered_news)}개")
+            
+            # 유사 뉴스 필터링
+            final_news = self.filter_similar_news(filtered_news, similarity_threshold=0.55)
+            return final_news[:max_results]
+        
+        # AND만 있거나 논리 연산이 없는 경우 (기존 로직)
         
         try:
             # 네이버 검색 API 요청
@@ -435,7 +571,8 @@ class NaverNewsCrawler:
                         'title': title,
                         'url': link,
                         'source': source,
-                        'date': pub_date
+                        'date': pub_date,
+                        'description': description  # OR 연산 및 논리 연산 필터링용
                     })
                     
                     print(f"[DEBUG] 뉴스 추가: {title}")

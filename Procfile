@@ -1,2 +1,2 @@
-web: python start.py
+worker: python bot.py
 

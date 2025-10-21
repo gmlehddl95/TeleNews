@@ -177,12 +177,50 @@ class TeleNewsBot:
                     message += f"⚠️ {len(already_exist)}개 이미 등록됨:\n"
                     message += ", ".join(already_exist)
             
-            # 로딩 메시지 수정
+            # 로딩 메시지 삭제
             if loading_msg:
                 try:
-                    await loading_msg.edit_text(message if message else "❌ 추가할 키워드가 없습니다.")
+                    await loading_msg.delete()
                 except:
-                    await self.safe_reply(update.message, message if message else "❌ 추가할 키워드가 없습니다.")
+                    pass
+            
+            # 결과 메시지 표시
+            if message:
+                await self.safe_reply(update.message, message)
+            
+            # 키워드 목록 자동 표시
+            all_keywords = self.db.get_keywords(user_id)
+            if all_keywords:
+                keyword_list = '\n'.join([f"• {kw}" for kw in all_keywords])
+                
+                # 각 키워드마다 삭제 버튼 생성 (2열로 배치)
+                keyboard = []
+                for i in range(0, len(all_keywords), 2):
+                    row = []
+                    # 첫 번째 키워드
+                    keyword1 = all_keywords[i]
+                    row.append(InlineKeyboardButton(f"🗑️ {keyword1}", callback_data=f"remove:{keyword1}"))
+                    
+                    # 두 번째 키워드 (있으면)
+                    if i + 1 < len(all_keywords):
+                        keyword2 = all_keywords[i + 1]
+                        row.append(InlineKeyboardButton(f"🗑️ {keyword2}", callback_data=f"remove:{keyword2}"))
+                    
+                    keyboard.append(row)
+                
+                # 모두 삭제, 즉시 뉴스 확인 및 키워드 추가 버튼
+                keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
+                keyboard.append([InlineKeyboardButton("📰 즉시 뉴스 확인", callback_data="check_news_now")])
+                keyboard.append([InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")])
+                
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await self.safe_reply(
+                    update.message,
+                    f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:", 
+                    parse_mode='HTML',
+                    reply_markup=reply_markup
+                )
         else:
             # 인자가 없으면 대화형 모드 시작
             self.waiting_for_keyword[user_id] = 'add'
@@ -240,8 +278,9 @@ class TeleNewsBot:
                 
                 keyboard.append(row)
             
-            # 모두 삭제 및 키워드 추가 버튼
+            # 모두 삭제, 즉시 뉴스 확인 및 키워드 추가 버튼
             keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
+            keyboard.append([InlineKeyboardButton("📰 즉시 뉴스 확인", callback_data="check_news_now")])
             keyboard.append([InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")])
             
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -374,6 +413,7 @@ class TeleNewsBot:
                             row.append(InlineKeyboardButton(f"🗑️ {keywords[i + 1]}", callback_data=f"remove:{keywords[i + 1]}"))
                         keyboard.append(row)
                     keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
+                    keyboard.append([InlineKeyboardButton("📰 즉시 뉴스 확인", callback_data="check_news_now")])
                     keyboard.append([InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")])
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     
@@ -519,6 +559,22 @@ class TeleNewsBot:
                 )
                 logger.info(f"사용자 {user_id} - 방해금지 시간 설정: {start_time} ~ {end_time}")
         
+        elif data == "check_news_now":
+            # 즉시 뉴스 확인 버튼
+            await query.answer()  # 버튼 클릭 응답
+            
+            # 로딩 메시지 전송
+            loading_msg = await query.message.reply_text("📰 뉴스를 확인하는 중...")
+            
+            # 뉴스 확인 실행 (수동 체크로 처리)
+            await self.check_news_for_user(user_id, manual_check=True)
+            
+            # 로딩 메시지 삭제
+            try:
+                await loading_msg.delete()
+            except:
+                pass
+        
         elif data == "add_keyword":
             # 키워드 추가 버튼 - 새 메시지로 보내기 (기존 목록 유지)
             await query.answer()  # 버튼 클릭 응답
@@ -645,6 +701,7 @@ class TeleNewsBot:
                                     row.append(InlineKeyboardButton(f"🗑️ {all_keywords[i + 1]}", callback_data=f"remove:{all_keywords[i + 1]}"))
                                 keyboard.append(row)
                             keyboard.append([InlineKeyboardButton("🗑️ 모두 삭제", callback_data="removeall")])
+                            keyboard.append([InlineKeyboardButton("📰 즉시 뉴스 확인", callback_data="check_news_now")])
                             keyboard.append([InlineKeyboardButton("➕ 키워드 추가", callback_data="add_keyword")])
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             

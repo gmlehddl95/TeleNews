@@ -561,6 +561,8 @@ class NaverNewsCrawler:
                         try:
                             from urllib.parse import urlparse
                             domain = urlparse(original_link).netloc
+                            print(f"[DEBUG] 원본링크: {original_link}")
+                            print(f"[DEBUG] 추출된 도메인: {domain}")
                             # 도메인을 언론사 이름으로 변환
                             domain_map = {
                                 'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
@@ -602,12 +604,15 @@ class NaverNewsCrawler:
                             for key, value in domain_map.items():
                                 if key in domain:
                                     source = value
+                                    print(f"[DEBUG] 매핑 성공: {domain} → {source}")
                                     break
                             
                             # 매핑되지 않은 경우 도메인 그대로 사용
                             if source == '알 수 없음':
                                 source = domain.replace('www.', '').split('.')[0].upper()
-                        except:
+                                print(f"[DEBUG] 매핑 실패, 도메인 기반: {domain} → {source}")
+                        except Exception as e:
+                            print(f"[DEBUG] 도메인 파싱 실패: {e}")
                             pass
                     
                     # 방법 2: description에서 추출 (백업)

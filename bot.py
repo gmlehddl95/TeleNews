@@ -35,6 +35,7 @@ class TeleNewsBot:
         """현재 시간이 사용자의 방해금지 시간인지 확인"""
         quiet_hours = self.db.get_quiet_hours(user_id)
         if not quiet_hours or not quiet_hours['enabled']:
+            logger.debug(f"[방해금지] 사용자 {user_id} - 방해금지 설정 없음 또는 비활성화")
             return False
         
         from datetime import datetime, timezone, timedelta
@@ -54,9 +55,8 @@ class TeleNewsBot:
             # 예: 22:00 ~ 07:00 (자정을 넘는 경우)
             is_quiet = current_time >= start or current_time <= end
         
-        # 디버깅 로그 (방해금지 시간일 때만)
-        if is_quiet:
-            logger.debug(f"[방해금지] 사용자 {user_id} - 현재시간: {current_time}, 설정: {start}~{end}, 활성: {quiet_hours['enabled']}")
+        # 디버깅 로그 (항상 출력)
+        logger.debug(f"[방해금지] 사용자 {user_id} - 현재시간: {current_time}, 설정: {start}~{end}, 활성: {quiet_hours['enabled']}, 결과: {is_quiet}")
         
         return is_quiet
     
@@ -337,7 +337,8 @@ class TeleNewsBot:
             current_info = f"""
 
 📌 <b>현재 상태</b>
-• {current_status}"""
+• 현재 시간: {current_time} (KST)
+• 설정 없음"""
         
         # 시작 시간 선택 버튼
         keyboard = [

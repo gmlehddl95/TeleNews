@@ -950,7 +950,7 @@ class TeleNewsBot:
             
             message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
             message += f"총 {len(new_news)}건 \n"
-            message += "────────────────\n\n"
+            message += "──────────────\n\n"
             
             for i, news in enumerate(new_news, 1):
                 title = news['title']
@@ -977,7 +977,7 @@ class TeleNewsBot:
                 
                 # 부가 정보는 작고 덜 눈에 띄게
                 message += f"<code>{source}, {date}</code>\n"
-                message += "───────────────\n\n"
+                message += "──────────────\n\n"
             
             # 메시지 전송 시도
             success = await self.send_message_to_user(user_id, message)
@@ -1041,7 +1041,7 @@ class TeleNewsBot:
             
             message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
             message += f"총 {len(new_news)}개 (관련 기사 총 {total_similar}건)\n"
-            message += "────────────────\n\n"
+            message += "──────────────\n\n"
             
             for i, news in enumerate(new_news, 1):
                 title = news['title']
@@ -1068,7 +1068,7 @@ class TeleNewsBot:
                 
                 # 부가 정보는 작고 덜 눈에 띄게
                 message += f"<code>{source}, {date}</code>\n"
-                message += "───────────────\n\n"
+                message += "──────────────\n\n"
             
             # 메시지 전송 시도
             success = await self.send_message_to_user(user_id, message)
@@ -1090,7 +1090,7 @@ class TeleNewsBot:
             message = f"📰 <b>최신 뉴스</b> (키워드: {keyword})\n"
             message += f"💡 <i>이미 확인한 뉴스입니다</i>\n"
             message += f"총 {len(sorted_news_list)}개 (관련 기사 총 {total_similar}건)\n"
-            message += "────────────────\n\n"
+            message += "──────────────\n\n"
             
             for i, news in enumerate(sorted_news_list, 1):
                 title = news['title']
@@ -1117,7 +1117,7 @@ class TeleNewsBot:
                 
                 # 부가 정보는 작고 덜 눈에 띄게
                 message += f"<code>{source}, {date}</code>\n"
-                message += "───────────────\n\n"
+                message += "──────────────\n\n"
             
             # 메시지 전송 (DB에는 기록하지 않음 - 이미 기록되어 있음)
             await self.send_message_to_user(user_id, message)

@@ -601,10 +601,16 @@ class NaverNewsCrawler:
                             
                             }
                             
+                            # 도메인 정규화 (www. 제거, 소문자 변환)
+                            normalized_domain = domain.lower().replace('www.', '')
+                            
                             for key, value in domain_map.items():
-                                if key in domain:
+                                # 정확한 매칭 또는 서브도메인 매칭
+                                if (normalized_domain == key or 
+                                    normalized_domain.endswith('.' + key) or
+                                    key in normalized_domain):
                                     source = value
-                                    print(f"[DEBUG] 매핑 성공: {domain} → {source}")
+                                    print(f"[DEBUG] 매핑 성공: {domain} → {source} (키: {key})")
                                     break
                             
                             # 매핑되지 않은 경우 도메인 그대로 사용

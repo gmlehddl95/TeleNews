@@ -627,6 +627,36 @@ class TeleNewsBot:
             except:
                 pass
             logger.info(f"사용자 {user_id} - 키워드 추가 취소")
+        
+        elif data.startswith("nasdaq_alert:"):
+            # 나스닥 알림 on/off 처리
+            action = data.split(":")[1]  # "on" 또는 "off"
+            
+            if action == "on":
+                # 알림 켜기
+                self.db.set_nasdaq_alert_setting(user_id, True)
+                await query.answer("✅ 나스닥 알림이 켜졌습니다!")
+                logger.info(f"사용자 {user_id} - 나스닥 알림 켜짐")
+            elif action == "off":
+                # 알림 끄기
+                self.db.set_nasdaq_alert_setting(user_id, False)
+                await query.answer("🔕 나스닥 알림이 꺼졌습니다!")
+                logger.info(f"사용자 {user_id} - 나스닥 알림 꺼짐")
+            
+            # 버튼 상태 업데이트
+            nasdaq_alert_enabled = self.db.get_nasdaq_alert_setting(user_id)
+            if nasdaq_alert_enabled:
+                button_text = "🔕 나스닥 알림 끄기"
+                callback_data = "nasdaq_alert:off"
+            else:
+                button_text = "🔔 나스닥 알림 켜기"
+                callback_data = "nasdaq_alert:on"
+            
+            keyboard = [[InlineKeyboardButton(button_text, callback_data=callback_data)]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # 메시지 업데이트 (버튼만 변경)
+            await query.edit_message_reply_markup(reply_markup=reply_markup)
     
     async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """일반 텍스트 메시지 처리 (대화형 키워드 입력 + 버튼 클릭)"""
@@ -789,14 +819,30 @@ class TeleNewsBot:
     
     async def stock_info_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """주가 정보 확인"""
+        user_id = update.effective_chat.id
+        
         # 로딩 메시지 전송 및 저장
         loading_msg = await update.message.reply_text("📊 주가 정보를 가져오는 중...")
         
         # 동기 함수를 별도 스레드에서 실행
         report = await asyncio.to_thread(self.stock_monitor.get_full_report_html)
         
-        # 결과 전송
-        await update.message.reply_text(report, parse_mode='HTML')
+        # 나스닥 알림 설정 확인
+        nasdaq_alert_enabled = self.db.get_nasdaq_alert_setting(user_id)
+        
+        # 버튼 생성
+        if nasdaq_alert_enabled:
+            button_text = "🔕 나스닥 알림 끄기"
+            callback_data = "nasdaq_alert:off"
+        else:
+            button_text = "🔔 나스닥 알림 켜기"
+            callback_data = "nasdaq_alert:on"
+        
+        keyboard = [[InlineKeyboardButton(button_text, callback_data=callback_data)]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # 결과 전송 (버튼 포함)
+        await update.message.reply_text(report, parse_mode='HTML', reply_markup=reply_markup)
         
         # 로딩 메시지 삭제
         try:
@@ -1214,6 +1260,12 @@ class TeleNewsBot:
             
             for user_id in all_users:
                 try:
+                    # 나스닥 알림 설정 확인
+                    nasdaq_alert_enabled = self.db.get_nasdaq_alert_setting(user_id)
+                    if not nasdaq_alert_enabled:
+                        logger.info(f"사용자 {user_id} - 나스닥 알림 비활성화, 건너뜀")
+                        continue
+                    
                     # 마지막 알림 레벨 확인
                     last_alert = self.db.get_last_stock_alert_level(user_id)
                     

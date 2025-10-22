@@ -75,6 +75,16 @@ class Database:
             )
         ''')
         
+        # 나스닥 알림 설정 테이블
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS nasdaq_alert_settings (
+                user_id BIGINT PRIMARY KEY,
+                enabled BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         self.conn.commit()
     
     def add_keyword(self, user_id, keyword):
@@ -276,6 +286,28 @@ class Database:
         """대기 중인 주가 알림 삭제"""
         cursor = self.conn.cursor()
         cursor.execute('DELETE FROM pending_stock_alerts WHERE user_id = %s', (user_id,))
+        self.conn.commit()
+    
+    def get_nasdaq_alert_setting(self, user_id):
+        """나스닥 알림 설정 조회"""
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT enabled FROM nasdaq_alert_settings WHERE user_id = %s', (user_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            # 기본값: True (활성화)
+            return True
+    
+    def set_nasdaq_alert_setting(self, user_id, enabled):
+        """나스닥 알림 설정 저장/업데이트"""
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO nasdaq_alert_settings (user_id, enabled, updated_at) 
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id) 
+            DO UPDATE SET enabled = %s, updated_at = CURRENT_TIMESTAMP
+        ''', (user_id, enabled, enabled))
         self.conn.commit()
     
     def close(self):

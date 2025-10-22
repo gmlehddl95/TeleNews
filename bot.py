@@ -351,8 +351,8 @@ class TeleNewsBot:
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
-            f"🔕 <b>방해금지 시간 설정</b>{current_info}\n\n"
-            "방해금지 설정을 위한 시작 시간과 종료 시간을 각각 선택할 수 있습니다.\n\n"
+            f"🔕 <b>방해금지 설정</b>{current_info}\n\n"
+            "방해금지 시작 시간과 종료 시간을 각각 선택할 수 있습니다.\n\n"
             "💡 설정한 시간대에는 자동 알림이 전송되지 않습니다.",
             parse_mode='HTML',
             reply_markup=reply_markup
@@ -572,7 +572,7 @@ class TeleNewsBot:
                 now = datetime.now(kst)
                 current_time = now.strftime('%H:%M')
                 is_currently_quiet = self.is_quiet_time(user_id)
-                current_status = "⚠️ 방해금지 시간" if is_currently_quiet else "✅ 알림중"
+                current_status = "⚠️ 방해금지중" if is_currently_quiet else "✅ 알림중"
                 
                 await query.edit_message_text(
                     f"✅ 방해금지 시간이 설정되었습니다!\n\n"

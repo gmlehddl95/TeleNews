@@ -596,7 +596,7 @@ class NaverNewsCrawler:
                                 'view.asiae.co.kr' : "아시아경제", 'ohmynews.com' : '오마이뉴스',
                                 'news.tf.co.kr': '더팩트', 'ichannela.com': '채널A',
                                 'pressian.com': '프레시안', 'news.bizwatch.co.kr': '비즈워치',
-                                'yonhapnewstv.co.kr': '연합뉴스TV'
+                                'yonhapnewstv.co.kr': '연합뉴스TV', 'mbiz.heraldcorp.com': '헤럴드경제'
                             
                             }
                             

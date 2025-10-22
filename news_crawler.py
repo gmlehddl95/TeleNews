@@ -561,8 +561,6 @@ class NaverNewsCrawler:
                         try:
                             from urllib.parse import urlparse
                             domain = urlparse(original_link).netloc
-                            print(f"[DEBUG] 원본링크: {original_link}")
-                            print(f"[DEBUG] 추출된 도메인: {domain}")
                             # 도메인을 언론사 이름으로 변환
                             domain_map = {
                                 'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
@@ -597,7 +595,8 @@ class NaverNewsCrawler:
                                 'daily.hankooki.com': '데일리한국', 'news.einfomax.co.kr': '연합인포맥스',
                                 'view.asiae.co.kr' : "아시아경제", 'ohmynews.com' : '오마이뉴스',
                                 'news.tf.co.kr': '더팩트', 'ichannela.com': '채널A',
-                                'pressian.com': '프레시안'
+                                'pressian.com': '프레시안', 'news.bizwatch.co.kr': '비즈워치',
+                                'yonhapnewstv.co.kr': '연합뉴스TV'
                             
                             }
                             
@@ -610,15 +609,12 @@ class NaverNewsCrawler:
                                     normalized_domain.endswith('.' + key) or
                                     key in normalized_domain):
                                     source = value
-                                    print(f"[DEBUG] 매핑 성공: {domain} → {source} (키: {key})")
                                     break
                             
                             # 매핑되지 않은 경우 도메인 그대로 사용
                             if source == '알 수 없음':
                                 source = domain.replace('www.', '').split('.')[0].upper()
-                                print(f"[DEBUG] 매핑 실패, 도메인 기반: {domain} → {source}")
-                        except Exception as e:
-                            print(f"[DEBUG] 도메인 파싱 실패: {e}")
+                        except:
                             pass
                     
                     # 방법 2: description에서 추출 (백업)

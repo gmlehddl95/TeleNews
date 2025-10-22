@@ -329,7 +329,7 @@ class TeleNewsBot:
             current_info = f"""
 
 📌 <b>현재 상태</b>
-• 현재 시간 및 상태: {current_time} (KST) {current_status}
+• 현재 시간 및 상태: {current_time} {current_status}
 • 방해금지 설정시간: {quiet_hours['start_time']} ~ {quiet_hours['end_time']}
 """
         else:
@@ -577,7 +577,7 @@ class TeleNewsBot:
                 await query.edit_message_text(
                     f"✅ 방해금지 시간이 설정되었습니다!\n\n"
                     f"📌 <b>현재 상태</b>\n"
-                    f"• 현재 시간 및 상태: {current_time} (KST) {current_status}\n"
+                    f"• 현재 시간 및 상태: {current_time} {current_status}\n"
                     f"• 방해금지 시간: {start_time} ~ {end_time}\n\n"
                     f"💡 이 시간대에는 자동 알림이 전송되지 않습니다.\n"
                     f"(수동 명령어는 사용 가능합니다)",

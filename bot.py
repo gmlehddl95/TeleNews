@@ -643,8 +643,17 @@ class TeleNewsBot:
                 await query.answer("🔕 나스닥 알림이 꺼졌습니다!")
                 logger.info(f"사용자 {user_id} - 나스닥 알림 꺼짐")
             
-            # 버튼 상태 업데이트
+            # 업데이트된 나스닥 알림 설정으로 리포트 재생성
             nasdaq_alert_enabled = self.db.get_nasdaq_alert_setting(user_id)
+            
+            # 새로운 리포트 생성 (동기 함수를 별도 스레드에서 실행)
+            updated_report = await asyncio.to_thread(
+                self.stock_monitor.get_full_report_html, 
+                user_id, 
+                nasdaq_alert_enabled
+            )
+            
+            # 버튼 상태 업데이트
             if nasdaq_alert_enabled:
                 button_text = "🔕 나스닥 알림 끄기"
                 callback_data = "nasdaq_alert:off"
@@ -655,8 +664,12 @@ class TeleNewsBot:
             keyboard = [[InlineKeyboardButton(button_text, callback_data=callback_data)]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            # 메시지 업데이트 (버튼만 변경)
-            await query.edit_message_reply_markup(reply_markup=reply_markup)
+            # 전체 메시지 업데이트 (리포트 내용 + 버튼)
+            await query.edit_message_text(
+                text=updated_report, 
+                parse_mode='HTML', 
+                reply_markup=reply_markup
+            )
     
     async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """일반 텍스트 메시지 처리 (대화형 키워드 입력 + 버튼 클릭)"""

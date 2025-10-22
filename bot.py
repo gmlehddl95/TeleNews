@@ -337,8 +337,7 @@ class TeleNewsBot:
             current_info = f"""
 
 📌 <b>현재 상태</b>
-• 현재 시간: {current_time} (KST)
-• 설정 없음"""
+• {current_status}"""
         
         # 시작 시간 선택 버튼
         keyboard = [

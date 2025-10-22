@@ -824,11 +824,15 @@ class TeleNewsBot:
         # 로딩 메시지 전송 및 저장
         loading_msg = await update.message.reply_text("📊 주가 정보를 가져오는 중...")
         
-        # 동기 함수를 별도 스레드에서 실행
-        report = await asyncio.to_thread(self.stock_monitor.get_full_report_html)
-        
         # 나스닥 알림 설정 확인
         nasdaq_alert_enabled = self.db.get_nasdaq_alert_setting(user_id)
+        
+        # 동기 함수를 별도 스레드에서 실행 (나스닥 알림 상태 전달)
+        report = await asyncio.to_thread(
+            self.stock_monitor.get_full_report_html, 
+            user_id, 
+            nasdaq_alert_enabled
+        )
         
         # 버튼 생성
         if nasdaq_alert_enabled:

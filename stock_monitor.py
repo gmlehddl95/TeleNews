@@ -270,9 +270,11 @@ class StockMonitor:
         
         return scenarios
     
-    def get_full_report_html(self):
+    def get_full_report_html(self, user_id=None, nasdaq_alert_enabled=True):
         """
         전체 리포트 생성 (HTML 형식)
+        :param user_id: 사용자 ID (선택사항)
+        :param nasdaq_alert_enabled: 나스닥 알림 활성화 상태
         :return: formatted string report
         """
         nasdaq_info = self.get_nasdaq_info()
@@ -301,6 +303,14 @@ class StockMonitor:
         
         ath_date_str = nasdaq_info['ath_date'].strftime('%Y-%m-%d')  # 날짜만 표시
         
+        # 나스닥 알림 상태 표시
+        if nasdaq_alert_enabled:
+            alert_status = "🔔 <b>나스닥 알림: ON</b>"
+            alert_desc = "나스닥100 전고점 대비 5% 이상 하락 시 1%p 단위로 알림"
+        else:
+            alert_status = "🔕 <b>나스닥 알림: OFF</b>"
+            alert_desc = "나스닥 하락 알림이 비활성화되어 있습니다"
+
         report = f"""📊 <b>주가 리포트</b> ({date_str})
 
 <b>나스닥 100 (^NDX)</b>
@@ -321,6 +331,11 @@ class StockMonitor:
 • 40% 하락 시: ${scenarios[40]:.2f}
 • 45% 하락 시: ${scenarios[45]:.2f}
 • 50% 하락 시: ${scenarios[50]:.2f}
+
+──────────────
+
+{alert_status}
+💡 {alert_desc}
 
 """
         return report

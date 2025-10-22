@@ -1040,7 +1040,7 @@ class TeleNewsBot:
             total_similar = sum(news.get('similar_count', 1) for news in new_news)
             
             message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
-            message += f"총 {len(new_news)}개 (관련 기사 총 {total_similar}건)\n"
+            message += f"총 {len(new_news)}건\n"
             message += "──────────────\n\n"
             
             for i, news in enumerate(new_news, 1):
@@ -1089,7 +1089,7 @@ class TeleNewsBot:
             
             message = f"📰 <b>최신 뉴스</b> (키워드: {keyword})\n"
             message += f"💡 <i>이미 확인한 뉴스입니다</i>\n"
-            message += f"총 {len(sorted_news_list)}개 (관련 기사 총 {total_similar}건)\n"
+            message += f"총 {len(sorted_news_list)}건)\n"
             message += "──────────────\n\n"
             
             for i, news in enumerate(sorted_news_list, 1):

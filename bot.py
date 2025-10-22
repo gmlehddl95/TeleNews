@@ -321,18 +321,19 @@ class TeleNewsBot:
         current_time = now.strftime('%H:%M')
         
         # 현재 설정 정보 및 상태
-        if quiet_hours:
-            status = "🔕 활성화" if quiet_hours['enabled'] else "🔔 비활성화"
+        if quiet_hours and quiet_hours['enabled']:
+            # 방해금지가 활성화된 상태일 때만 설정 시간 표시
             is_currently_quiet = self.is_quiet_time(user_id)
-            current_status = "⚠️ 방해금지 시간" if is_currently_quiet else "✅ 알림 활성"
+            current_status = "⚠️ 방해금지 시간" if is_currently_quiet else "✅ 알림중"
             
             current_info = f"""
 
 📌 <b>현재 상태</b>
 • 현재 시간 및 상태: {current_time} (KST) {current_status}
-• 방해금지 설정시간: {quiet_hours['start_time']} ~ {quiet_hours['end_time']} ({status})
+• 설정시간: {quiet_hours['start_time']} ~ {quiet_hours['end_time']} (🔕방해금지중)
 """
         else:
+            # 방해금지가 비활성화되었거나 설정이 없는 상태
             current_info = f"""
 
 📌 <b>현재 상태</b>
@@ -347,9 +348,6 @@ class TeleNewsBot:
         # 해제 버튼 (활성화된 상태일 때만)
         if quiet_hours and quiet_hours['enabled']:
             keyboard.append([InlineKeyboardButton("🔔 방해금지 해제", callback_data="quiet:off")])
-        # 재활성화 버튼 (비활성화된 상태이지만 설정이 있을 때)
-        elif quiet_hours and not quiet_hours['enabled']:
-            keyboard.append([InlineKeyboardButton("🔕 방해금지 재활성화", callback_data="quiet:on")])
         
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -499,11 +497,7 @@ class TeleNewsBot:
                     end_time = quiet_hours['end_time']
                     
                     await query.edit_message_text(
-                        f"🔕 방해금지 시간이 재활성화되었습니다!\n\n"
-                        f"📌 <b>현재 상태</b>\n"
-                        f"• 현재 시간: {current_time} (KST)\n"
-                        f"• 설정: {start_time} ~ {end_time}\n"
-                        f"• 상태: 🔕 방해금지 활성\n\n"
+                        f"🔕 방해금지 시간이 설정되었습니다!\n\n"
                         f"💡 설정된 시간대에는 자동 알림이 전송되지 않습니다.",
                         parse_mode='HTML'
                     )
@@ -579,7 +573,7 @@ class TeleNewsBot:
                 now = datetime.now(kst)
                 current_time = now.strftime('%H:%M')
                 is_currently_quiet = self.is_quiet_time(user_id)
-                current_status = "⚠️ 방해금지 시간" if is_currently_quiet else "✅ 알림 활성"
+                current_status = "⚠️ 방해금지 시간" if is_currently_quiet else "✅ 알림중"
                 
                 await query.edit_message_text(
                     f"✅ 방해금지 시간이 설정되었습니다!\n\n"

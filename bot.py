@@ -217,7 +217,7 @@ class TeleNewsBot:
                 
                 await self.safe_reply(
                     update.message,
-                    f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:", 
+                    f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다.", 
                     parse_mode='HTML',
                     reply_markup=reply_markup
                 )
@@ -293,7 +293,7 @@ class TeleNewsBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await update.message.reply_text(
-                f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:", 
+                f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다.", 
                 parse_mode='HTML',
                 reply_markup=reply_markup
             )
@@ -324,20 +324,20 @@ class TeleNewsBot:
         if quiet_hours and quiet_hours['enabled']:
             # 방해금지가 활성화된 상태일 때만 설정 시간 표시
             is_currently_quiet = self.is_quiet_time(user_id)
-            current_status = "⚠️ 방해금지 시간" if is_currently_quiet else "✅ 알림중"
+            current_status = "⚠️ 방해금지중" if is_currently_quiet else "✅ 알림중"
             
             current_info = f"""
 
 📌 <b>현재 상태</b>
 • 현재 시간 및 상태: {current_time} (KST) {current_status}
-• 설정시간: {quiet_hours['start_time']} ~ {quiet_hours['end_time']} (🔕방해금지중)
+• 방해금지 설정시간: {quiet_hours['start_time']} ~ {quiet_hours['end_time']}
 """
         else:
             # 방해금지가 비활성화되었거나 설정이 없는 상태
             current_info = f"""
 
 📌 <b>현재 상태</b>
-• ✅ 알림중(방해금지 비활성화화)"""
+• ✅ 알림중(방해금지 비활성화)"""
         
         # 시작 시간 선택 버튼
         keyboard = [
@@ -352,7 +352,7 @@ class TeleNewsBot:
         
         await update.message.reply_text(
             f"🔕 <b>방해금지 시간 설정</b>{current_info}\n\n"
-            "시작 시간과 종료 시간을 각각 선택할 수 있습니다.\n\n"
+            "방해금지 설정을 위한 시작 시간과 종료 시간을 각각 선택할 수 있습니다.\n\n"
             "💡 설정한 시간대에는 자동 알림이 전송되지 않습니다.",
             parse_mode='HTML',
             reply_markup=reply_markup
@@ -425,7 +425,7 @@ class TeleNewsBot:
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     
                     await query.edit_message_text(
-                        f"✅ '{keyword}' 제거됨!\n\n📝 <b>남은 키워드:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:",
+                        f"✅ '{keyword}' 제거됨!\n\n📝 <b>남은 키워드:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다.",
                         parse_mode='HTML',
                         reply_markup=reply_markup
                     )
@@ -522,7 +522,7 @@ class TeleNewsBot:
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await query.edit_message_text(
                     "🔕 <b>방해금지 시작 시간 선택</b>\n\n"
-                    "알림을 받지 않을 시작 시간을 선택하세요:",
+                    "알림을 받지 않을 시작 시간을 선택하세요.",
                     parse_mode='HTML',
                     reply_markup=reply_markup
                 )
@@ -550,7 +550,7 @@ class TeleNewsBot:
                 await query.edit_message_text(
                     f"🔕 <b>방해금지 종료 시간 선택</b>\n\n"
                     f"시작 시간: {start_time}\n\n"
-                    f"알림을 다시 받을 종료 시간을 선택하세요:",
+                    f"알림을 다시 받을 종료 시간을 선택하세요.",
                     parse_mode='HTML',
                     reply_markup=reply_markup
                 )
@@ -577,9 +577,8 @@ class TeleNewsBot:
                 await query.edit_message_text(
                     f"✅ 방해금지 시간이 설정되었습니다!\n\n"
                     f"📌 <b>현재 상태</b>\n"
-                    f"• 현재 시간: {current_time} (KST)\n"
-                    f"• 설정: {start_time} ~ {end_time} (🔕 활성화)\n"
-                    f"• 상태: {current_status}\n\n"
+                    f"• 현재 시간 및 상태: {current_time} (KST) {current_status}\n"
+                    f"• 방해금지 시간: {start_time} ~ {end_time}\n\n"
                     f"💡 이 시간대에는 자동 알림이 전송되지 않습니다.\n"
                     f"(수동 명령어는 사용 가능합니다)",
                     parse_mode='HTML'
@@ -613,7 +612,7 @@ class TeleNewsBot:
             # 입력 안내 메시지 전송
             input_msg = await query.message.reply_text(
                 "📝 <b>키워드 추가</b>\n\n"
-                "추가할 키워드를 입력해주세요:\n\n"
+                "추가할 키워드를 입력해주세요.\n\n"
                 "🔹 <b>단순 키워드</b>\n"
                 "예시: 삼성전자, AI, 나스닥\n"
                 "💡 콤마(,)로 구분하여 여러 개 동시 입력 가능\n\n"
@@ -638,7 +637,7 @@ class TeleNewsBot:
         
         elif data == "cancel_add_keyword":
             # 키워드 추가 취소
-            await query.answer("취소되었습니다")
+            await query.answer("취소되었습니다.")
             if user_id in self.waiting_for_keyword:
                 del self.waiting_for_keyword[user_id]
             # 입력 안내 메시지만 삭제 (목록은 유지)
@@ -797,7 +796,7 @@ class TeleNewsBot:
                                 await self.application.bot.edit_message_text(
                                     chat_id=waiting_info['chat_id'],
                                     message_id=waiting_info['list_message_id'],
-                                    text=f"{result_msg}📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:",
+                                    text=f"{result_msg}📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다.",
                                     parse_mode='HTML',
                                     reply_markup=reply_markup
                                 )
@@ -807,7 +806,7 @@ class TeleNewsBot:
                                     await update.message.reply_text(result_msg.strip())
                                 
                                 await update.message.reply_text(
-                                    f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다:",
+                                    f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다.",
                                     parse_mode='HTML',
                                     reply_markup=reply_markup
                                 )
@@ -1171,7 +1170,7 @@ class TeleNewsBot:
             total_similar = sum(news.get('similar_count', 1) for news in sorted_news_list)
             
             message = f"📰 <b>최신 뉴스</b> (키워드: {keyword})\n"
-            message += f"💡 <i>이미 확인한 뉴스입니다</i>\n"
+            message += f"💡 <i>이미 확인한 뉴스입니다.</i>\n"
             message += f"총 {len(sorted_news_list)}건\n"
             message += "──────────────\n\n"
             

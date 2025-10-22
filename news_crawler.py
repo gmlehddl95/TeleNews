@@ -294,6 +294,10 @@ class NaverNewsCrawler:
             data = response.json()
             news_list = []
             
+            # 디버깅: API 응답 구조 확인
+            if data.get('items'):
+                print(f"[DEBUG] 네이버 API 응답 구조: {list(data['items'][0].keys())}")
+            
             for item in data.get('items', []):
                 try:
                     title = BeautifulSoup(item.get('title', ''), 'html.parser').get_text()

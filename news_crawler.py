@@ -607,8 +607,7 @@ class NaverNewsCrawler:
                             for key, value in domain_map.items():
                                 # 정확한 매칭 또는 서브도메인 매칭
                                 if (normalized_domain == key or 
-                                    normalized_domain.endswith('.' + key) or
-                                    key in normalized_domain):
+                                    normalized_domain.endswith('.' + key)):
                                     source = value
                                     break
                             

@@ -364,6 +364,19 @@ class Database:
         ''', (user_id, enabled, enabled))
         self.conn.commit()
     
+    def get_user_count(self):
+        """전체 사용자 수 조회"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('SELECT COUNT(DISTINCT user_id) FROM keywords')
+            result = cursor.fetchone()
+            cursor.close()
+            return result[0] if result else 0
+        except Exception as e:
+            print(f"[ERROR] 사용자 수 조회 실패: {e}")
+            return 0
+    
     def close(self):
         """데이터베이스 연결 종료"""
         self.conn.close()

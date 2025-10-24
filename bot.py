@@ -357,6 +357,47 @@ class TeleNewsBot:
             reply_markup=reply_markup
         )
     
+    async def users_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """관리자 전용 사용자 수 확인 명령어"""
+        user_id = update.effective_chat.id
+        
+        # 관리자 권한 확인
+        if user_id != 2140208898:
+            await update.message.reply_text("❌ 이 명령어는 관리자만 사용할 수 있습니다.")
+            return
+        
+        try:
+            # 사용자 수 조회
+            total_users = self.db.get_user_count()
+            
+            # 키워드 통계
+            all_keywords = self.db.get_all_user_keywords()
+            total_keywords = len(all_keywords)
+            
+            # 사용자별 키워드 수 계산
+            from collections import defaultdict
+            user_keyword_count = defaultdict(int)
+            for user_id, keyword in all_keywords:
+                user_keyword_count[user_id] += 1
+            
+            avg_keywords = total_keywords / total_users if total_users > 0 else 0
+            
+            users_message = f"""👥 <b>TeleNews Bot 사용자 현황</b>
+
+📊 <b>사용자 통계</b>
+• 전체 사용자: {total_users:,}명
+• 전체 키워드: {total_keywords:,}개
+• 사용자당 평균: {avg_keywords:.1f}개
+
+🕐 <b>조회 시간</b>
+• {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"""
+            
+            await update.message.reply_text(users_message, parse_mode='HTML')
+            
+        except Exception as e:
+            logger.error(f"사용자 수 조회 중 오류: {e}")
+            await update.message.reply_text("❌ 사용자 수 조회 중 오류가 발생했습니다.")
+    
     async def handle_callback_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """인라인 버튼 클릭 처리"""
         query = update.callback_query
@@ -1535,6 +1576,7 @@ class TeleNewsBot:
         self.application.add_handler(CommandHandler("news", self.check_news_command))
         self.application.add_handler(CommandHandler("stock", self.stock_info_command))
         self.application.add_handler(CommandHandler("setquiet", self.set_quiet_command))
+        self.application.add_handler(CommandHandler("users", self.users_command))
         
         # 콜백 쿼리 핸들러 (버튼 클릭)
         self.application.add_handler(CallbackQueryHandler(self.handle_callback_query))
@@ -1557,6 +1599,7 @@ class TeleNewsBot:
                 BotCommand("news", "즉시 뉴스 확인"),
                 BotCommand("stock", "나스닥 정보"),
                 BotCommand("setquiet", "방해금지 시간 설정"),
+                BotCommand("users", "사용자 현황 (관리자)"),
             ])
         
         self.application.post_init = post_init

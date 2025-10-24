@@ -232,8 +232,7 @@ class TeleNewsBot:
                 "• <code>속보 and 삼성</code> - 속보와 삼성 모두 포함\n"
                 "• <code>삼성 or 애플</code> - 삼성 또는 애플 중 하나 이상\n"
                 "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n"
-                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n"
-                "💡 and/or는 영어 소문자로 입력", 
+                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n", 
                 parse_mode='HTML')
             
             # 대기 상태 저장 (입력 안내 메시지 ID 저장)
@@ -620,8 +619,7 @@ class TeleNewsBot:
                 "• <code>속보 and 삼성</code> - 속보와 삼성 모두 포함\n"
                 "• <code>삼성 or 애플</code> - 삼성 또는 애플 중 하나 이상\n"
                 "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n"
-                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n"
-                "💡 and/or는 영어 소문자로 입력",
+                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n",
                 parse_mode='HTML',
                 reply_markup=reply_markup
             )

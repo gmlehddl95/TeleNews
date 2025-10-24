@@ -7,12 +7,35 @@ from datetime import datetime
 class Database:
     def __init__(self):
         # Render 환경 변수에서 DATABASE_URL 가져오기
-        database_url = os.getenv('DATABASE_URL')
-        if not database_url:
+        self.database_url = os.getenv('DATABASE_URL')
+        if not self.database_url:
             raise ValueError("DATABASE_URL 환경 변수가 설정되지 않았습니다!")
         
-        self.conn = psycopg2.connect(database_url)
+        self.conn = None
+        self.connect()
         self.create_tables()
+    
+    def connect(self):
+        """DB 연결 (재연결 포함)"""
+        try:
+            if self.conn:
+                self.conn.close()
+            self.conn = psycopg2.connect(self.database_url)
+            print("✅ DB 연결 성공")
+        except Exception as e:
+            print(f"❌ DB 연결 실패: {e}")
+            raise
+    
+    def ensure_connection(self):
+        """연결 상태 확인 및 재연결"""
+        try:
+            # 연결 상태 확인
+            if self.conn is None or self.conn.closed:
+                print("🔄 DB 연결 끊어짐, 재연결 시도...")
+                self.connect()
+        except Exception as e:
+            print(f"🔄 DB 재연결 필요: {e}")
+            self.connect()
     
     def create_tables(self):
         """데이터베이스 테이블 생성"""
@@ -90,12 +113,23 @@ class Database:
     def add_keyword(self, user_id, keyword):
         """키워드 추가"""
         try:
+            self.ensure_connection()
             cursor = self.conn.cursor()
             cursor.execute('INSERT INTO keywords (user_id, keyword) VALUES (%s, %s)', (user_id, keyword))
             self.conn.commit()
             return True
         except psycopg2.IntegrityError:
-            self.conn.rollback()
+            try:
+                self.conn.rollback()
+            except:
+                pass
+            return False
+        except Exception as e:
+            print(f"❌ 키워드 추가 실패: {e}")
+            try:
+                self.conn.rollback()
+            except:
+                pass
             return False
     
     def remove_keyword(self, user_id, keyword):
@@ -148,6 +182,9 @@ class Database:
     def cleanup_old_news(self, days=7):
         """오래된 뉴스 기록 삭제 (기본 7일)"""
         try:
+            # 연결 상태 확인 및 재연결
+            self.ensure_connection()
+            
             cursor = self.conn.cursor()
             
             # 삭제 전 개수 확인
@@ -175,7 +212,12 @@ class Database:
             
         except Exception as e:
             print(f"❌ DB 정리 실패: {e}")
-            self.conn.rollback()
+            try:
+                # 연결이 살아있을 때만 rollback 시도
+                if self.conn and not self.conn.closed:
+                    self.conn.rollback()
+            except:
+                pass  # rollback 실패해도 무시
             return 0
     
     def get_last_stock_alert_level(self, user_id):

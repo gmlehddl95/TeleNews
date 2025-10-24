@@ -149,6 +149,19 @@ class Database:
         """오래된 뉴스 기록 삭제 (기본 7일)"""
         try:
             cursor = self.conn.cursor()
+            
+            # 삭제 전 개수 확인
+            cursor.execute('''
+                SELECT COUNT(*) FROM sent_news 
+                WHERE sent_at < NOW() - INTERVAL '%s days'
+            ''', (days,))
+            old_count = cursor.fetchone()[0]
+            
+            if old_count == 0:
+                print(f"🗑️  DB 정리: 삭제할 오래된 뉴스 기록 없음 ({days}일 이상)")
+                return 0
+            
+            # 실제 삭제 실행
             cursor.execute('''
                 DELETE FROM sent_news 
                 WHERE sent_at < NOW() - INTERVAL '%s days'
@@ -157,12 +170,11 @@ class Database:
             deleted_count = cursor.rowcount
             self.conn.commit()
             
-            if deleted_count > 0:
-                print(f"🗑️  {deleted_count}개의 오래된 뉴스 기록 삭제됨 ({days}일 이상)")
-            
+            print(f"🗑️  DB 정리 완료: {deleted_count}개의 오래된 뉴스 기록 삭제됨 ({days}일 이상)")
             return deleted_count
+            
         except Exception as e:
-            print(f"❌ 오래된 뉴스 삭제 중 오류: {e}")
+            print(f"❌ DB 정리 실패: {e}")
             self.conn.rollback()
             return 0
     

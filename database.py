@@ -2,7 +2,11 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
 import os
+import logging
 from datetime import datetime
+
+# 로깅 설정
+logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self):
@@ -21,9 +25,9 @@ class Database:
             if self.conn:
                 self.conn.close()
             self.conn = psycopg2.connect(self.database_url)
-            print("✅ DB 연결 성공")
+            logger.info("DB 연결 성공")
         except Exception as e:
-            print(f"❌ DB 연결 실패: {e}")
+            logger.error(f"DB 연결 실패: {e}")
             raise
     
     def ensure_connection(self):
@@ -31,10 +35,10 @@ class Database:
         try:
             # 연결 상태 확인
             if self.conn is None or self.conn.closed:
-                print("🔄 DB 연결 끊어짐, 재연결 시도...")
+                logger.warning("DB 연결 끊어짐, 재연결 시도...")
                 self.connect()
         except Exception as e:
-            print(f"🔄 DB 재연결 필요: {e}")
+            logger.warning(f"DB 재연결 필요: {e}")
             self.connect()
     
     def create_tables(self):
@@ -125,7 +129,7 @@ class Database:
                 pass
             return False
         except Exception as e:
-            print(f"❌ 키워드 추가 실패: {e}")
+            logger.error(f"키워드 추가 실패: {e}")
             try:
                 self.conn.rollback()
             except:
@@ -195,7 +199,7 @@ class Database:
             old_count = cursor.fetchone()[0]
             
             if old_count == 0:
-                print(f"🗑️  DB 정리: 삭제할 오래된 뉴스 기록 없음 ({days}일 이상)")
+                logger.info(f"DB 정리: 삭제할 오래된 뉴스 기록 없음 ({days}일 이상)")
                 return 0
             
             # 실제 삭제 실행
@@ -207,11 +211,11 @@ class Database:
             deleted_count = cursor.rowcount
             self.conn.commit()
             
-            print(f"🗑️  DB 정리 완료: {deleted_count}개의 오래된 뉴스 기록 삭제됨 ({days}일 이상)")
+            logger.info(f"DB 정리 완료: {deleted_count}개의 오래된 뉴스 기록 삭제됨 ({days}일 이상)")
             return deleted_count
             
         except Exception as e:
-            print(f"❌ DB 정리 실패: {e}")
+            logger.error(f"DB 정리 실패: {e}")
             try:
                 # 연결이 살아있을 때만 rollback 시도
                 if self.conn and not self.conn.closed:
@@ -374,7 +378,7 @@ class Database:
             cursor.close()
             return result[0] if result else 0
         except Exception as e:
-            print(f"[ERROR] 사용자 수 조회 실패: {e}")
+            logger.error(f"사용자 수 조회 실패: {e}")
             return 0
     
     def close(self):

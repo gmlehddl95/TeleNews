@@ -21,3 +21,6 @@ STOCK_ALERT_TIMES = ['20:00', '22:00', '00:00']
 # 데이터베이스 URL (PostgreSQL - 환경 변수에서 가져옴)
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
+# 로깅 설정
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()  # DEBUG, INFO, WARNING, ERROR
+

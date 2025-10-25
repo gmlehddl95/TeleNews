@@ -7,7 +7,7 @@ from telegram.request import HTTPXRequest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, NEWS_CHECK_INTERVAL, STOCK_ALERT_TIMES
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, NEWS_CHECK_INTERVAL, STOCK_ALERT_TIMES, LOG_LEVEL
 from database import Database
 from news_crawler import NaverNewsCrawler
 from stock_monitor import StockMonitor
@@ -15,7 +15,7 @@ from stock_monitor import StockMonitor
 # 로깅 설정
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=getattr(logging, LOG_LEVEL, logging.INFO)
 )
 logger = logging.getLogger(__name__)
 

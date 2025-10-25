@@ -4,9 +4,13 @@ from urllib.parse import quote
 import time
 import re
 import html
+import logging
 from datetime import datetime, timedelta
 from config import NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 from difflib import SequenceMatcher
+
+# 로깅 설정
+logger = logging.getLogger(__name__)
 
 class NaverNewsCrawler:
     def __init__(self):
@@ -211,7 +215,7 @@ class NaverNewsCrawler:
                 if similarity >= similarity_threshold:
                     group['similar'].append(news)
                     found_group = True
-                    print(f"[DEBUG] 유사 뉴스 그룹화 (유사도 {similarity:.2f}): {news['title']}")
+                    logger.debug(f"유사 뉴스 그룹화 (유사도 {similarity:.2f}): {news['title']}")
                     break
             
             # 새로운 그룹 생성
@@ -233,17 +237,17 @@ class NaverNewsCrawler:
             if naver_news:
                 # 네이버 뉴스 중 가장 최신 선택
                 representative = self._get_latest_news(naver_news)
-                print(f"[DEBUG] 대표 선택 (네이버 뉴스): {representative['title']}")
+                logger.debug(f"대표 선택 (네이버 뉴스): {representative['title']}")
             else:
                 # 우선순위 2: 전체 중 가장 최신
                 representative = self._get_latest_news(all_similar)
-                print(f"[DEBUG] 대표 선택 (최신): {representative['title']}")
+                logger.debug(f"대표 선택 (최신): {representative['title']}")
             
             # 유사 뉴스 개수 추가
             representative['similar_count'] = len(all_similar)
             filtered_news.append(representative)
         
-        print(f"[DEBUG] 유사 뉴스 필터링: {len(news_list)}개 → {len(filtered_news)}개")
+        logger.info(f"유사 뉴스 필터링: {len(news_list)}개 → {len(filtered_news)}개")
         return filtered_news
     
     def _get_latest_news(self, news_list):
@@ -356,13 +360,13 @@ class NaverNewsCrawler:
                     })
                     
                 except Exception as e:
-                    print(f"[DEBUG] 항목 파싱 오류: {e}")
+                    logger.warning(f"항목 파싱 오류: {e}")
                     continue
             
             return news_list
             
         except Exception as e:
-            print(f"[DEBUG] 키워드 '{keyword}' 검색 오류: {e}")
+            logger.error(f"키워드 '{keyword}' 검색 오류: {e}")
             return []
     
     def search_news(self, keyword, max_results=10):
@@ -379,17 +383,17 @@ class NaverNewsCrawler:
         
         # 키워드 표현식 파싱
         original_expr, individual_keywords, has_logic = self.parse_keyword_expression(keyword)
-        print(f"[DEBUG] 파싱 결과 - 원본: '{original_expr}', 키워드: {individual_keywords}, 논리연산: {has_logic}")
+        logger.debug(f"파싱 결과 - 원본: '{original_expr}', 키워드: {individual_keywords}, 논리연산: {has_logic}")
         
         # OR 연산이 있는지 확인
         has_or = has_logic and bool(re.search(r'\bor\b', keyword, re.IGNORECASE))
-        print(f"[DEBUG] OR 연산 감지: {has_or}, has_logic={has_logic}, keyword='{keyword}'")
+        logger.debug(f"OR 연산 감지: {has_or}, has_logic={has_logic}, keyword='{keyword}'")
         
         # OR 연산이 있는 경우, 각 키워드로 개별 검색하여 합침
         if has_or:
-            print(f"[DEBUG] ===== OR 연산 모드 시작 =====")
-            print(f"[DEBUG] 원본 표현식: {original_expr}")
-            print(f"[DEBUG] 개별 키워드: {individual_keywords}")
+            logger.debug("===== OR 연산 모드 시작 =====")
+            logger.debug(f"원본 표현식: {original_expr}")
+            logger.debug(f"개별 키워드: {individual_keywords}")
             
             # 키워드별로 뉴스 수집 및 필터링
             keyword_news = {}  # {keyword: [filtered_news_list]}
@@ -398,7 +402,7 @@ class NaverNewsCrawler:
             
             for idx, kw in enumerate(individual_keywords):
                 try:
-                    print(f"[DEBUG] OR 연산 [{idx+1}/{len(individual_keywords)}] - '{kw}' 검색 중...")
+                    logger.debug(f"OR 연산 [{idx+1}/{len(individual_keywords)}] - '{kw}' 검색 중...")
                     news_results = self._search_single_keyword(kw, max_results * 2)
                     
                     # 유사 뉴스 필터링 (각 키워드별로)
@@ -414,9 +418,9 @@ class NaverNewsCrawler:
                             seen_urls.add(news['url'])
                     
                     keyword_news[kw] = unique_filtered
-                    print(f"[DEBUG] OR 연산 - '{kw}': {len(news_results)}개 수집 → {len(filtered)}개 필터링 → {len(unique_filtered)}개 중복제거")
+                    logger.debug(f"OR 연산 - '{kw}': {len(news_results)}개 수집 → {len(filtered)}개 필터링 → {len(unique_filtered)}개 중복제거")
                 except Exception as e:
-                    print(f"[DEBUG] '{kw}' 검색 중 오류: {e}")
+                    logger.error(f"'{kw}' 검색 중 오류: {e}")
                     keyword_news[kw] = []
                     continue
             
@@ -431,12 +435,12 @@ class NaverNewsCrawler:
                     if self.evaluate_keyword_expression(original_expr, full_text):
                         filtered_news.append(news)
                 
-                print(f"[DEBUG] 복합 OR+AND 필터링: {len(all_news)}개 → {len(filtered_news)}개")
+                logger.debug(f"복합 OR+AND 필터링: {len(all_news)}개 → {len(filtered_news)}개")
                 # 복합 표현식의 경우 앞에서부터 max_results개 반환
                 return filtered_news[:max_results]
             
             # 단순 OR: 비율에 맞게 분배
-            print(f"[DEBUG] 단순 OR 연산: 총 {len(all_news)}개 수집")
+            logger.debug(f"단순 OR 연산: 총 {len(all_news)}개 수집")
             
             # 각 키워드별 개수 계산
             total_count = sum(len(news_list) for news_list in keyword_news.values())
@@ -462,7 +466,7 @@ class NaverNewsCrawler:
                     take_count = 1
                 
                 allocated[kw] = take_count
-                print(f"[DEBUG] '{kw}': {len(news_list)}개 중 {take_count}개 선택 (비율: {ratio:.2%})")
+                logger.debug(f"'{kw}': {len(news_list)}개 중 {take_count}개 선택 (비율: {ratio:.2%})")
             
             # 할당된 개수의 합이 max_results보다 작으면 나머지를 가장 많은 키워드에 추가
             total_allocated = sum(allocated.values())
@@ -472,16 +476,16 @@ class NaverNewsCrawler:
                 remaining = max_results - total_allocated
                 if len(keyword_news[max_kw]) >= allocated[max_kw] + remaining:
                     allocated[max_kw] += remaining
-                    print(f"[DEBUG] 남은 {remaining}개를 '{max_kw}'에 추가")
+                    logger.debug(f"남은 {remaining}개를 '{max_kw}'에 추가")
             
             # 비율에 맞게 뉴스 선택
             for kw, take_count in allocated.items():
                 news_list = keyword_news[kw]
                 selected = news_list[:take_count]
                 result_news.extend(selected)
-                print(f"[DEBUG] '{kw}'에서 {len(selected)}개 추가")
+                logger.debug(f"'{kw}'에서 {len(selected)}개 추가")
             
-            print(f"[DEBUG] 최종 선택: {len(result_news)}개")
+            logger.debug(f"최종 선택: {len(result_news)}개")
             return result_news[:max_results]  # 혹시 모를 초과 방지
         
         # AND만 있거나 논리 연산이 없는 경우 (기존 로직)
@@ -509,9 +513,9 @@ class NaverNewsCrawler:
             }
             
             if has_logic:
-                print(f"[DEBUG] 네이버 API 검색 (논리 연산): {original_expr} -> 검색어: {search_query}")
+                logger.debug(f"네이버 API 검색 (논리 연산): {original_expr} -> 검색어: {search_query}")
             else:
-                print(f"[DEBUG] 네이버 API 검색: {keyword}")
+                logger.debug(f"네이버 API 검색: {keyword}")
             
             response = requests.get(self.api_url, headers=headers, params=params, timeout=8)
             response.raise_for_status()
@@ -541,7 +545,7 @@ class NaverNewsCrawler:
                         full_text = title + ' ' + description
                         if not self.evaluate_keyword_expression(original_expr, full_text):
                             # 표현식을 만족하지 않으면 건너뛰기
-                            print(f"[DEBUG] 논리 연산 불일치, 제외: {title}")
+                            logger.debug(f"논리 연산 불일치, 제외: {title}")
                             continue
                     
                     # 제목이 잘린 경우 (... 또는 …으로 끝나는 경우) 전체 제목 크롤링
@@ -634,11 +638,11 @@ class NaverNewsCrawler:
                         
                         # 7일 이전 뉴스는 건너뛰기
                         if news_date < cutoff_date:
-                            print(f"[DEBUG] 오래된 뉴스 제외: {title} (작성일: {news_date.strftime('%Y-%m-%d')})")
+                            logger.debug(f"오래된 뉴스 제외: {title} (작성일: {news_date.strftime('%Y-%m-%d')})")
                             continue
                     except Exception as e:
                         # 날짜 파싱 실패 시에도 뉴스는 포함 (안전장치)
-                        print(f"[DEBUG] 날짜 파싱 실패 (뉴스는 포함): {e}")
+                        logger.warning(f"날짜 파싱 실패 (뉴스는 포함): {e}")
                     
                     news_list.append({
                         'title': title,
@@ -648,13 +652,13 @@ class NaverNewsCrawler:
                         'description': description  # OR 연산 및 논리 연산 필터링용
                     })
                     
-                    print(f"[DEBUG] 뉴스 추가: {title}")
+                    logger.debug(f"뉴스 추가: {title}")
                     
                 except Exception as e:
-                    print(f"[DEBUG] 항목 파싱 오류: {e}")
+                    logger.warning(f"항목 파싱 오류: {e}")
                     continue
             
-            print(f"[DEBUG] 총 {len(news_list)}개 뉴스 수집 완료")
+            logger.info(f"총 {len(news_list)}개 뉴스 수집 완료")
             
             # 유사 뉴스 필터링 (대표 뉴스만 반환)
             filtered_news = self.filter_similar_news(news_list, similarity_threshold=0.55)
@@ -662,7 +666,7 @@ class NaverNewsCrawler:
             # 최종적으로 max_results 개수만 반환
             final_news = filtered_news[:max_results]
             if len(filtered_news) > max_results:
-                print(f"[DEBUG] 최종 제한: {len(filtered_news)}개 → {max_results}개")
+                logger.debug(f"최종 제한: {len(filtered_news)}개 → {max_results}개")
             
             return final_news
             

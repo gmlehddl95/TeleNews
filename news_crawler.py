@@ -247,7 +247,7 @@ class NaverNewsCrawler:
             representative['similar_count'] = len(all_similar)
             filtered_news.append(representative)
         
-        logger.info(f"유사 뉴스 필터링: {len(news_list)}개 → {len(filtered_news)}개")
+        logger.debug(f"유사 뉴스 필터링: {len(news_list)}개 → {len(filtered_news)}개")
         return filtered_news
     
     def _get_latest_news(self, news_list):
@@ -658,7 +658,7 @@ class NaverNewsCrawler:
                     logger.warning(f"항목 파싱 오류: {e}")
                     continue
             
-            logger.info(f"총 {len(news_list)}개 뉴스 수집 완료")
+            logger.debug(f"총 {len(news_list)}개 뉴스 수집 완료")
             
             # 유사 뉴스 필터링 (대표 뉴스만 반환)
             filtered_news = self.filter_similar_news(news_list, similarity_threshold=0.55)

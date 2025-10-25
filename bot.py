@@ -1599,7 +1599,6 @@ class TeleNewsBot:
                 BotCommand("news", "즉시 뉴스 확인"),
                 BotCommand("stock", "나스닥 정보"),
                 BotCommand("setquiet", "방해금지 시간 설정"),
-                BotCommand("users", "사용자 현황 (관리자)"),
             ])
         
         self.application.post_init = post_init

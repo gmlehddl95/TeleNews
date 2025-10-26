@@ -330,6 +330,15 @@ class NaverNewsCrawler:
                         try:
                             from urllib.parse import urlparse
                             domain = urlparse(original_link).netloc
+                            
+                            # 도메인 정규화 (서브도메인 제거)
+                            normalized_domain = domain.lower()
+                            subdomains_to_remove = ['www.', 'm.', 'mobile.', 'news.', 'view.', 'cm.']
+                            for subdomain in subdomains_to_remove:
+                                if normalized_domain.startswith(subdomain):
+                                    normalized_domain = normalized_domain[len(subdomain):]
+                                    break
+                            
                             domain_map = {
                                 'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
                                 'chosun.com': '조선일보', 'joongang.co.kr': '중앙일보',
@@ -342,12 +351,12 @@ class NaverNewsCrawler:
                             }
                             
                             for key, value in domain_map.items():
-                                if key in domain:
+                                if key in normalized_domain:
                                     source = value
                                     break
                             
                             if source == '알 수 없음':
-                                source = domain.replace('www.', '').split('.')[0].upper()
+                                source = normalized_domain.split('.')[0].upper()
                         except:
                             pass
                     
@@ -565,6 +574,15 @@ class NaverNewsCrawler:
                         try:
                             from urllib.parse import urlparse
                             domain = urlparse(original_link).netloc
+                            
+                            # 도메인 정규화 (서브도메인 제거)
+                            normalized_domain = domain.lower()
+                            subdomains_to_remove = ['www.', 'm.', 'mobile.', 'news.', 'view.', 'cm.']
+                            for subdomain in subdomains_to_remove:
+                                if normalized_domain.startswith(subdomain):
+                                    normalized_domain = normalized_domain[len(subdomain):]
+                                    break
+                            
                             # 도메인을 언론사 이름으로 변환
                             domain_map = {
                                 'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
@@ -592,21 +610,18 @@ class NaverNewsCrawler:
                                 'slownews.kr': '슬로우뉴스',
                                 'imaeil.com': '매일신문', 'biz.heraldcorp.com': '해럴드경제',
                                 'heraldcorp.com': '헤럴드경제', 'womaneconomy.co.kr': '여성경제신문',
-                                'cm.asiae.co.kr': '아시아경제', 'busan.com': '부산일보',
+                                'asiae.co.kr': '아시아경제', 'busan.com': '부산일보',
                                 'kado.net': '강원도민일보', 'pennmike.com': '펜엔마이크',
                                 'etoday.co.kr': '이투데이', 'newsprime.co.kr': '프라임경제',                                 'nongmin.com': '농민신문', 'kookje.co.kr': '국제신문', 
                                 'newscj.com': '천지일보', 'pointdaily.co.kr': '포인트데일리', 
-                                'daily.hankooki.com': '데일리한국', 'news.einfomax.co.kr': '연합인포맥스',
+                                'daily.hankooki.com': '데일리한국', 'einfomax.co.kr': '연합인포맥스',
                                 'view.asiae.co.kr' : "아시아경제", 'ohmynews.com' : '오마이뉴스',
                                 'news.tf.co.kr': '더팩트', 'ichannela.com': '채널A',
-                                'pressian.com': '프레시안', 'news.bizwatch.co.kr': '비즈워치',
+                                'pressian.com': '프레시안', 'bizwatch.co.kr': '비즈워치',
                                 'yonhapnewstv.co.kr': '연합뉴스TV', 'mbiz.heraldcorp.com': '헤럴드경제',
-                                'mobile.newsis.com': '뉴시스'
+                                'newsis.com': '뉴시스'
                             
                             }
-                            
-                            # 도메인 정규화 (www. 제거, 소문자 변환)
-                            normalized_domain = domain.lower().replace('www.', '')
                             
                             for key, value in domain_map.items():
                                 # 정확한 매칭 또는 서브도메인 매칭
@@ -615,9 +630,9 @@ class NaverNewsCrawler:
                                     source = value
                                     break
                             
-                            # 매핑되지 않은 경우 도메인 그대로 사용
+                            # 매핑되지 않은 경우 정규화된 도메인 사용
                             if source == '알 수 없음':
-                                source = domain.replace('www.', '').split('.')[0].upper()
+                                source = normalized_domain.split('.')[0].upper()
                         except:
                             pass
                     

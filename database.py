@@ -121,6 +121,17 @@ class Database:
             )
         ''')
         
+        # 직전 메시지 저장 테이블 (수동 확인용)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS last_messages (
+                user_id BIGINT,
+                keyword TEXT,
+                message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, keyword)
+            )
+        ''')
+        
         self.conn.commit()
     
     def add_keyword(self, user_id, keyword):
@@ -451,6 +462,40 @@ class Database:
         except Exception as e:
             logger.error(f"차단되지 않은 사용자 키워드 조회 실패: {e}")
             return []
+    
+    def save_last_message(self, user_id, keyword, message):
+        """직전 메시지 저장 (수동 확인용)"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                INSERT INTO last_messages (user_id, keyword, message, created_at)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (user_id, keyword) 
+                DO UPDATE SET message = %s, created_at = CURRENT_TIMESTAMP
+            ''', (user_id, keyword, message, message))
+            self.conn.commit()
+            cursor.close()
+            return True
+        except Exception as e:
+            logger.error(f"직전 메시지 저장 실패: {e}")
+            return False
+    
+    def get_last_message(self, user_id, keyword):
+        """직전 메시지 조회 (수동 확인용)"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT message FROM last_messages 
+                WHERE user_id = %s AND keyword = %s
+            ''', (user_id, keyword))
+            result = cursor.fetchone()
+            cursor.close()
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"직전 메시지 조회 실패: {e}")
+            return None
     
     def close(self):
         """데이터베이스 연결 종료"""

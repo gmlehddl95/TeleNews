@@ -1362,6 +1362,18 @@ class TeleNewsBot:
         if new_news:
             new_news = self._sort_news_by_date(new_news)
         
+        # 새 뉴스가 15개 미만이면 이미 본 뉴스로 채우기
+        if new_news and len(new_news) < 15:
+            # 기본 키워드들 추출
+            base_keywords = self.normalize_keyword(keyword)
+            
+            # 이미 본 뉴스에서 부족한 만큼 추가
+            additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15 - len(new_news))
+            new_news.extend(additional_news)
+            
+            # 다시 날짜순으로 정렬
+            new_news = self._sort_news_by_date(new_news)
+        
         # 새 뉴스가 있으면 전송
         if new_news:
             logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 메시지 생성 시작")
@@ -1369,8 +1381,16 @@ class TeleNewsBot:
             # 총 관련 기사 수 계산
             total_similar = sum(news.get('similar_count', 1) for news in new_news)
             
-            message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
-            message += f"총 {len(new_news)}건 \n"
+            # 새로운 뉴스와 이미 본 뉴스 구분
+            new_count = len([news for news in new_news if not self.db.is_news_sent(user_id, keyword, news['url'])])
+            seen_count = len(new_news) - new_count
+            
+            if seen_count > 0:
+                message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
+                message += f"새로운 뉴스 {new_count}건 + 이미 본 뉴스 {seen_count}건 = 총 {len(new_news)}건\n"
+            else:
+                message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
+                message += f"총 {len(new_news)}건\n"
             message += "──────────────\n\n"
             
             for i, news in enumerate(new_news, 1):
@@ -1415,6 +1435,45 @@ class TeleNewsBot:
                 logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 전송 실패")
         else:
             logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 없음으로 전송하지 않음")
+    
+    def _get_additional_news(self, user_id, keyword, base_keywords, needed_count):
+        """이미 본 뉴스 중에서 부족한 만큼 추가 뉴스 선택"""
+        try:
+            # 기본 키워드들의 뉴스 수집
+            all_news = []
+            for base_kw in base_keywords:
+                news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=50)  # 더 많이 가져오기
+                all_news.extend(news_list)
+            
+            if not all_news:
+                return []
+            
+            # 중복 제거
+            seen_urls = set()
+            unique_news = []
+            for news in all_news:
+                if news['url'] not in seen_urls:
+                    unique_news.append(news)
+                    seen_urls.add(news['url'])
+            
+            # 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
+            unique_news = self._sort_news_by_date(unique_news)
+            
+            # 이미 본 뉴스만 필터링
+            seen_news = []
+            for news in unique_news:
+                if self.db.is_news_sent(user_id, keyword, news['url']):
+                    seen_news.append(news)
+            
+            # 부족한 만큼만 선택
+            additional_news = seen_news[:needed_count]
+            
+            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 {len(additional_news)}개 추가")
+            return additional_news
+            
+        except Exception as e:
+            logger.error(f"추가 뉴스 선택 중 오류: {e}")
+            return []
     
     async def _send_latest_news_message(self, user_id, keyword, base_news_map):
         """최신 뉴스 15개로 메시지 생성해서 전송 (이미 본 뉴스 포함)"""

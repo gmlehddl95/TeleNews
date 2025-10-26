@@ -1446,7 +1446,54 @@ class TeleNewsBot:
             else:
                 logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 전송 실패")
         else:
-            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 없음으로 전송하지 않음")
+            # 새로운 뉴스가 0개일 때도 이미 본 뉴스로 채우기 시도
+            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 0개, 이미 본 뉴스로 채우기 시도")
+            base_keywords = self.normalize_keyword(keyword)
+            additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15)
+            if additional_news:
+                new_news = additional_news
+                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 {len(additional_news)}개 추가")
+                
+                # 이미 본 뉴스로 메시지 생성
+                message = f"📰 <b>최신 뉴스</b> (키워드: {keyword})\n"
+                message += f"💡 <i>이미 확인한 뉴스입니다.</i>\n"
+                message += f"총 {len(new_news)}건\n"
+                message += "──────────────\n\n"
+                
+                for i, news in enumerate(new_news, 1):
+                    title = news['title']
+                    source = news['source']
+                    date = self._format_date_simple(news['date'])
+                    url = news['url']
+                    similar_count = news.get('similar_count', 1)
+                    
+                    # 뉴스 아이콘 결정
+                    icon = self._get_news_icon(news)
+                    
+                    # 제목 (아이콘 + 제목)
+                    message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+                    
+                    # 관련뉴스 개수 표시
+                    if icon == '⭐':
+                        if similar_count >= 2:
+                            message += f" [관련뉴스: {similar_count}건]"
+                    elif similar_count > 1:
+                        message += f" [관련뉴스: {similar_count}건]"
+                    
+                    message += "\n\n"
+                    
+                    # 부가 정보
+                    message += f"<code>{source}, {date}</code>\n"
+                    message += "──────────────\n\n"
+                
+                # 메시지 전송 (DB에는 저장하지 않음 - 이미 본 뉴스이므로)
+                success = await self.send_message_to_user(user_id, message)
+                if success:
+                    logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 {len(new_news)}개 전송 성공")
+                else:
+                    logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 전송 실패")
+            else:
+                logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 추가할 이미 본 뉴스 없음")
     
     def _get_additional_news(self, user_id, keyword, base_keywords, needed_count):
         """이미 본 뉴스 중에서 부족한 만큼 추가 뉴스 선택"""

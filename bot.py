@@ -116,54 +116,24 @@ class TeleNewsBot:
                 return filtered_news[:15]  # 15개 제한
             
         elif " or " in keyword.lower():
-            # OR 연산: 합집합 (비례 배분으로 15개 제한)
+            # OR 연산: 통합 후 필터링 (방안 2)
             all_news = []
-            keyword_news_map = {}  # {keyword: [news_list]}
             
-            # 1. 각 키워드별 뉴스 수집
+            # 1. 모든 키워드의 뉴스 통합 (유사뉴스 필터링 전)
             for base_kw in base_keywords:
                 base_news = base_news_map.get(base_kw, [])
-                keyword_news_map[base_kw] = base_news
                 all_news.extend(base_news)
             
-            # 2. 중복 제거
-            seen_urls = set()
-            unique_news = []
-            for news in all_news:
-                if news['url'] not in seen_urls:
-                    unique_news.append(news)
-                    seen_urls.add(news['url'])
+            # 2. URL 기준 중복 제거
+            unique_news = self._remove_duplicates(all_news)
             
-            # 3. 15개 이하면 그대로 반환
-            if len(unique_news) <= 15:
-                return unique_news
+            # 3. 유사뉴스 필터링 (키워드 간 중복/유사뉴스 제거)
+            filtered_news = self.news_crawler.filter_similar_news(unique_news, similarity_threshold=0.55)
             
-            # 4. 15개 초과 시 비례 배분
-            result = []
-            total_news = sum(len(news_list) for news_list in keyword_news_map.values())
+            # 4. 최신순 정렬 후 15개 제한
+            sorted_news = self._sort_news_by_date(filtered_news)
             
-            for base_kw, news_list in keyword_news_map.items():
-                if not news_list:
-                    continue
-                    
-                # 비례 배분 계산
-                proportion = len(news_list) / total_news
-                target_count = int(proportion * 15)
-                
-                # 해당 키워드에서 target_count개만 선택
-                selected_news = news_list[:target_count]
-                
-                # 중복 제거하면서 추가
-                for news in selected_news:
-                    if news['url'] not in {n['url'] for n in result}:
-                        result.append(news)
-                        if len(result) >= 15:
-                            break
-                
-                if len(result) >= 15:
-                    break
-            
-            return result[:15]
+            return sorted_news[:15]
         else:
             # 단일 키워드
             result = base_news_map.get(base_keywords[0], [])

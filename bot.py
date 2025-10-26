@@ -32,14 +32,27 @@ class TeleNewsBot:
         self.waiting_for_keyword = {}  # 사용자가 키워드 입력 대기 중인지 추적
         self.message_cache = {}  # {keyword: last_message} - 수동 확인용 메시지 캐시
     
+    
     def normalize_keyword(self, keyword):
-        """복합연산 키워드를 기본 키워드로 분해"""
+        """복합연산 키워드를 기본 키워드로 분해 (단순화)"""
         if " and " in keyword.lower():
             return [kw.strip() for kw in keyword.split(" and ")]
         elif " or " in keyword.lower():
             return [kw.strip() for kw in keyword.split(" or ")]
         else:
             return [keyword.strip()]
+    
+    def _remove_duplicates(self, news_list):
+        """URL 기준으로 중복 뉴스 제거"""
+        seen_urls = set()
+        unique_news = []
+        
+        for news in news_list:
+            if news['url'] not in seen_urls:
+                unique_news.append(news)
+                seen_urls.add(news['url'])
+        
+        return unique_news
     
     def get_unique_base_keywords(self, user_keywords):
         """고유한 기본 키워드만 추출"""
@@ -54,48 +67,64 @@ class TeleNewsBot:
         return list(base_keywords), keyword_mapping
     
     def apply_operation(self, keyword, base_news_map):
-        """복합연산에 따라 뉴스 조합"""
+        """복합연산에 따라 뉴스 조합 (단순화된 AND/OR 연산)"""
         base_keywords = self.normalize_keyword(keyword)
         logger.info(f"키워드 '{keyword}': 기본 키워드 {base_keywords}, base_news_map 키: {list(base_news_map.keys())}")
         
         if " and " in keyword.lower():
-            # AND 연산: 교집합 (개선된 버전 - 100개씩 가져온 후 교집합)
+            # AND 연산: 네이버 + 연산자 활용
             if not base_keywords:
                 logger.warning(f"키워드 '{keyword}': 기본 키워드 없음")
                 return []
             
-            # 각 키워드별로 100개씩 뉴스를 가져와서 교집합 계산
-            keyword_news_lists = []
-            for base_kw in base_keywords:
-                # 100개씩 가져오기 (유사뉴스 필터링 전)
-                raw_news = self.news_crawler._search_single_keyword(base_kw, max_count=100)
-                keyword_news_lists.append(raw_news)
-                logger.info(f"키워드 '{keyword}': AND 연산, 키워드 '{base_kw}'에서 {len(raw_news)}개 뉴스 수집")
-            
-            # 교집합 계산 (URL 기준)
-            if not keyword_news_lists:
-                logger.warning(f"키워드 '{keyword}': 뉴스 리스트 없음")
-                return []
-            
-            # 첫 번째 키워드의 뉴스로 시작
-            result = keyword_news_lists[0]
-            logger.info(f"키워드 '{keyword}': AND 연산 시작, 첫 번째 키워드에서 {len(result)}개 뉴스")
-            
-            # 나머지 키워드들과 교집합 계산
-            for i, base_news in enumerate(keyword_news_lists[1:], 1):
-                logger.info(f"키워드 '{keyword}': AND 연산, {i+1}번째 키워드에서 {len(base_news)}개 뉴스")
-                # URL 기준으로 교집합 계산
-                result_urls = {news['url'] for news in result}
-                base_urls = {news['url'] for news in base_news}
-                common_urls = result_urls.intersection(base_urls)
-                result = [news for news in result if news['url'] in common_urls]
-                logger.info(f"키워드 '{keyword}': AND 연산 중간 결과 {len(result)}개 뉴스")
-            
-            # 유사뉴스 필터링 적용
-            filtered_result = self.news_crawler.filter_similar_news(result, similarity_threshold=0.55)
-            logger.info(f"키워드 '{keyword}': AND 연산 최종 결과 {len(filtered_result)}개 뉴스 (유사뉴스 필터링 후)")
-            
-            return filtered_result[:15]  # 15개 제한
+            if len(base_keywords) == 2:
+                # 2개 키워드: A +B, B +A 검색
+                query1 = f"{base_keywords[0]} +{base_keywords[1]}"
+                query2 = f"{base_keywords[1]} +{base_keywords[0]}"
+                
+                logger.info(f"키워드 '{keyword}': AND 연산 - '{query1}' 검색")
+                news1 = self.news_crawler._search_single_keyword(query1, max_count=100)
+                logger.info(f"키워드 '{keyword}': AND 연산 - '{query2}' 검색")
+                news2 = self.news_crawler._search_single_keyword(query2, max_count=100)
+                
+                # 결과 합치기
+                all_news = news1 + news2
+                logger.info(f"키워드 '{keyword}': AND 연산 - 총 {len(all_news)}개 뉴스 수집")
+                
+                # 중복 제거
+                unique_news = self._remove_duplicates(all_news)
+                logger.info(f"키워드 '{keyword}': AND 연산 - 중복 제거 후 {len(unique_news)}개 뉴스")
+                
+                # 유사뉴스 필터링
+                filtered_news = self.news_crawler.filter_similar_news(unique_news, similarity_threshold=0.55)
+                logger.info(f"키워드 '{keyword}': AND 연산 - 유사뉴스 필터링 후 {len(filtered_news)}개 뉴스")
+                
+                return filtered_news[:15]  # 15개 제한
+                
+            elif len(base_keywords) >= 3:
+                # 3개 이상: 대표 조합 3가지 검색 (방안 3)
+                queries = [
+                    f"{base_keywords[0]} +{base_keywords[1]} +{base_keywords[2]}",
+                    f"{base_keywords[1]} +{base_keywords[0]} +{base_keywords[2]}",
+                    f"{base_keywords[2]} +{base_keywords[0]} +{base_keywords[1]}"
+                ]
+                
+                all_news = []
+                for i, query in enumerate(queries, 1):
+                    logger.info(f"키워드 '{keyword}': AND 연산 - '{query}' 검색 ({i}/3)")
+                    news = self.news_crawler._search_single_keyword(query, max_count=100)
+                    all_news.extend(news)
+                    logger.info(f"키워드 '{keyword}': AND 연산 - '{query}'에서 {len(news)}개 뉴스")
+                
+                # 중복 제거
+                unique_news = self._remove_duplicates(all_news)
+                logger.info(f"키워드 '{keyword}': AND 연산 - 중복 제거 후 {len(unique_news)}개 뉴스")
+                
+                # 유사뉴스 필터링
+                filtered_news = self.news_crawler.filter_similar_news(unique_news, similarity_threshold=0.55)
+                logger.info(f"키워드 '{keyword}': AND 연산 - 유사뉴스 필터링 후 {len(filtered_news)}개 뉴스")
+                
+                return filtered_news[:15]  # 15개 제한
             
         elif " or " in keyword.lower():
             # OR 연산: 합집합 (비례 배분으로 15개 제한)
@@ -374,10 +403,8 @@ class TeleNewsBot:
                 "예시: 삼성전자, AI, 나스닥\n"
                 "💡 콤마(,)로 구분하여 여러 개 동시 입력 가능\n\n"
                 "🔹 <b>논리 연산 (AND/OR)</b>\n"
-                "• <code>속보 and 삼성</code> - 속보와 삼성 모두 포함\n"
-                "• <code>삼성 or 애플</code> - 삼성 또는 애플 중 하나 이상\n"
-                "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n"
-                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n", 
+                "• <code>삼성 and 애플</code> - 삼성과 애플 모두 관련된 기사\n"
+                "• <code>삼성 or 애플</code> - 삼성 또는 애플 관련 기사\n", 
                 parse_mode='HTML')
             
             # 대기 상태 저장 (입력 안내 메시지 ID 저장)

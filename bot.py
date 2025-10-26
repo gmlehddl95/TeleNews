@@ -30,12 +30,11 @@ class TeleNewsBot:
         self.scheduler = AsyncIOScheduler()
         self.application = None
         self.waiting_for_keyword = {}  # 사용자가 키워드 입력 대기 중인지 추적
-        self.blocked_users = set()  # 봇을 차단한 사용자 목록
     
     def unblock_user_if_needed(self, user_id):
         """사용자가 봇을 다시 사용하려고 할 때 차단 목록에서 제거"""
-        if user_id in self.blocked_users:
-            self.blocked_users.remove(user_id)
+        if self.db.is_user_blocked(user_id):
+            self.db.remove_blocked_user(user_id)
             logger.info(f"사용자 {user_id} - 차단 목록에서 제거됨 (봇 재사용)")
     
     def is_quiet_time(self, user_id):
@@ -966,7 +965,7 @@ class TeleNewsBot:
             # 7일 이상 오래된 뉴스 기록 삭제
             self.db.cleanup_old_news(days=7)
             
-            user_keywords = self.db.get_all_user_keywords()
+            user_keywords = self.db.get_all_user_keywords_except_blocked()
             
             if not user_keywords:
                 logger.info("등록된 키워드가 없습니다.")
@@ -983,11 +982,6 @@ class TeleNewsBot:
             # 사용자별로 처리
             for user_id, keywords in user_keyword_map.items():
                 try:
-                    # 차단된 사용자 체크
-                    if user_id in self.blocked_users:
-                        logger.debug(f"사용자 {user_id} - 봇 차단됨, 뉴스 알림 건너뜀")
-                        continue
-                    
                     # 방해금지 시간 체크
                     if self.is_quiet_time(user_id):
                         logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀")
@@ -1395,11 +1389,6 @@ class TeleNewsBot:
                     if not should_alert:
                         continue
                     
-                    # 차단된 사용자 체크
-                    if user_id in self.blocked_users:
-                        logger.debug(f"사용자 {user_id} - 봇 차단됨, 주가 알림 건너뜀")
-                        continue
-                    
                     # 방해금지 시간 체크
                     if self.is_quiet_time(user_id):
                         logger.info(f"사용자 {user_id} - 방해금지 시간, 주가 알림 대기 중 ({current_level}% 하락)")
@@ -1502,8 +1491,8 @@ class TeleNewsBot:
                 
                 # 사용자가 봇을 차단한 경우 - 재시도 불필요
                 if 'bot was blocked' in error_str or 'Forbidden' in error_type:
-                    self.blocked_users.add(user_id)
-                    logger.warning(f"⚠️ 사용자 {user_id} - 봇 차단됨, 차단 목록에 추가")
+                    self.db.add_blocked_user(user_id, 'bot_blocked')
+                    logger.warning(f"⚠️ 사용자 {user_id} - 봇 차단됨, DB에 차단 상태 저장")
                     return False
                 
                 # 재시도 가능한 오류인지 확인

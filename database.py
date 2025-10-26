@@ -112,6 +112,15 @@ class Database:
             )
         ''')
         
+        # 차단된 사용자 테이블
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS blocked_users (
+                user_id BIGINT PRIMARY KEY,
+                blocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reason TEXT DEFAULT 'bot_blocked'
+            )
+        ''')
+        
         self.conn.commit()
     
     def add_keyword(self, user_id, keyword):
@@ -380,6 +389,68 @@ class Database:
         except Exception as e:
             logger.error(f"사용자 수 조회 실패: {e}")
             return 0
+    
+    def add_blocked_user(self, user_id, reason='bot_blocked'):
+        """차단된 사용자 추가"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                INSERT INTO blocked_users (user_id, reason) 
+                VALUES (%s, %s) 
+                ON CONFLICT (user_id) 
+                DO UPDATE SET blocked_at = CURRENT_TIMESTAMP, reason = %s
+            ''', (user_id, reason, reason))
+            self.conn.commit()
+            cursor.close()
+            return True
+        except Exception as e:
+            logger.error(f"차단된 사용자 추가 실패: {e}")
+            return False
+    
+    def remove_blocked_user(self, user_id):
+        """차단된 사용자 제거"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('DELETE FROM blocked_users WHERE user_id = %s', (user_id,))
+            self.conn.commit()
+            cursor.close()
+            return True
+        except Exception as e:
+            logger.error(f"차단된 사용자 제거 실패: {e}")
+            return False
+    
+    def is_user_blocked(self, user_id):
+        """사용자가 차단되었는지 확인"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('SELECT user_id FROM blocked_users WHERE user_id = %s', (user_id,))
+            result = cursor.fetchone()
+            cursor.close()
+            return result is not None
+        except Exception as e:
+            logger.error(f"차단된 사용자 확인 실패: {e}")
+            return False
+    
+    def get_all_user_keywords_except_blocked(self):
+        """차단되지 않은 사용자의 키워드만 조회"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT DISTINCT k.user_id, k.keyword 
+                FROM keywords k 
+                LEFT JOIN blocked_users b ON k.user_id = b.user_id 
+                WHERE b.user_id IS NULL
+            ''')
+            result = cursor.fetchall()
+            cursor.close()
+            return result
+        except Exception as e:
+            logger.error(f"차단되지 않은 사용자 키워드 조회 실패: {e}")
+            return []
     
     def close(self):
         """데이터베이스 연결 종료"""

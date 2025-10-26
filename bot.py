@@ -1358,21 +1358,33 @@ class TeleNewsBot:
         
         logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 {len(new_news)}개 (전체 {len(news_list)}개 중)")
         
+        # 새로운 뉴스가 0개인 경우 추가 정보 로그
+        if len(new_news) == 0:
+            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 모든 뉴스가 이미 본 뉴스입니다.")
+            # 이미 본 뉴스로 채우기 시도
+            if len(news_list) > 0:
+                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스로 15개 채우기 시도")
+                base_keywords = self.normalize_keyword(keyword)
+                additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15)
+                if additional_news:
+                    new_news = additional_news
+                    logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 {len(additional_news)}개 추가")
+                else:
+                    logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 추가할 이미 본 뉴스 없음")
+        
         # 새 뉴스를 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
         if new_news:
             new_news = self._sort_news_by_date(new_news)
-        
-        # 새 뉴스가 15개 미만이면 이미 본 뉴스로 채우기
-        if new_news and len(new_news) < 15:
-            # 기본 키워드들 추출
-            base_keywords = self.normalize_keyword(keyword)
             
-            # 이미 본 뉴스에서 부족한 만큼 추가
-            additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15 - len(new_news))
-            new_news.extend(additional_news)
-            
-            # 다시 날짜순으로 정렬
-            new_news = self._sort_news_by_date(new_news)
+            # 새 뉴스가 15개 미만이면 이미 본 뉴스로 채우기
+            if len(new_news) < 15:
+                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 {len(new_news)}개, 이미 본 뉴스로 {15 - len(new_news)}개 추가")
+                base_keywords = self.normalize_keyword(keyword)
+                additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15 - len(new_news))
+                if additional_news:
+                    new_news.extend(additional_news)
+                    new_news = self._sort_news_by_date(new_news)
+                    logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 총 {len(new_news)}개 뉴스로 채움")
         
         # 새 뉴스가 있으면 전송
         if new_news:
@@ -1660,9 +1672,11 @@ class TeleNewsBot:
                     
                     # 3. 복합연산 적용
                     combined_news = self.apply_operation(keyword, base_news_map)
+                    logger.info(f"사용자 {user_id} - {keyword} 복합연산 결과: {len(combined_news)}개 뉴스")
                     
                     if combined_news:
                         # 4. 새로운 뉴스가 있으면 전송 + DB 저장
+                        logger.info(f"사용자 {user_id} - {keyword} 새로운 뉴스 처리 시작")
                         await self._send_news_to_user(user_id, keyword, combined_news)
                     else:
                         # 5. 새로운 뉴스가 없으면 이미 본 뉴스 15개로 메시지 생성해서 전송

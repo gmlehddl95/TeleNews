@@ -1417,8 +1417,12 @@ class TeleNewsBot:
                 # 뉴스 아이콘 결정
                 icon = self._get_news_icon(news)
                 
-                # 제목 (아이콘 + 제목)
-                message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+                # 수동 확인일 때 새로운 뉴스 표시
+                is_new_news = not self.db.is_news_sent(user_id, keyword, news['url'])
+                new_indicator = "🆕 " if manual_check and is_new_news else ""
+                
+                # 제목 (새로운 뉴스 표시 + 아이콘 + 제목)
+                message += f"<a href='{url}'><b>{new_indicator}{icon} {title}</b></a>"
                 
                 # 관련뉴스 개수 표시
                 # ⭐(단독/속보/긴급)는 2건 이상일 때만, 다른 아이콘은 2건 이상일 때 표시

@@ -68,7 +68,6 @@ class TeleNewsBot:
     def apply_operation(self, keyword, base_news_map):
         """복합연산에 따라 뉴스 조합 (단순화된 AND/OR 연산)"""
         base_keywords = self.normalize_keyword(keyword)
-        logger.info(f"키워드 '{keyword}': 기본 키워드 {base_keywords}, base_news_map 키: {list(base_news_map.keys())}")
         
         if " and " in keyword.lower():
             # AND 연산: 네이버 + 연산자 활용
@@ -81,22 +80,17 @@ class TeleNewsBot:
                 query1 = f"{base_keywords[0]} +{base_keywords[1]}"
                 query2 = f"{base_keywords[1]} +{base_keywords[0]}"
                 
-                logger.info(f"키워드 '{keyword}': AND 연산 - '{query1}' 검색")
                 news1 = self.news_crawler._search_single_keyword(query1, max_count=100)
-                logger.info(f"키워드 '{keyword}': AND 연산 - '{query2}' 검색")
                 news2 = self.news_crawler._search_single_keyword(query2, max_count=100)
                 
                 # 결과 합치기
                 all_news = news1 + news2
-                logger.info(f"키워드 '{keyword}': AND 연산 - 총 {len(all_news)}개 뉴스 수집")
                 
                 # 중복 제거
                 unique_news = self._remove_duplicates(all_news)
-                logger.info(f"키워드 '{keyword}': AND 연산 - 중복 제거 후 {len(unique_news)}개 뉴스")
                 
                 # 유사뉴스 필터링
                 filtered_news = self.news_crawler.filter_similar_news(unique_news, similarity_threshold=0.55)
-                logger.info(f"키워드 '{keyword}': AND 연산 - 유사뉴스 필터링 후 {len(filtered_news)}개 뉴스")
                 
                 return filtered_news[:15]  # 15개 제한
                 
@@ -110,24 +104,19 @@ class TeleNewsBot:
                 
                 all_news = []
                 for i, query in enumerate(queries, 1):
-                    logger.info(f"키워드 '{keyword}': AND 연산 - '{query}' 검색 ({i}/3)")
                     news = self.news_crawler._search_single_keyword(query, max_count=100)
                     all_news.extend(news)
-                    logger.info(f"키워드 '{keyword}': AND 연산 - '{query}'에서 {len(news)}개 뉴스")
                 
                 # 중복 제거
                 unique_news = self._remove_duplicates(all_news)
-                logger.info(f"키워드 '{keyword}': AND 연산 - 중복 제거 후 {len(unique_news)}개 뉴스")
                 
                 # 유사뉴스 필터링
                 filtered_news = self.news_crawler.filter_similar_news(unique_news, similarity_threshold=0.55)
-                logger.info(f"키워드 '{keyword}': AND 연산 - 유사뉴스 필터링 후 {len(filtered_news)}개 뉴스")
                 
                 return filtered_news[:15]  # 15개 제한
             
         elif " or " in keyword.lower():
             # OR 연산: 합집합 (비례 배분으로 15개 제한)
-            logger.info(f"키워드 '{keyword}': OR 연산 시작")
             all_news = []
             keyword_news_map = {}  # {keyword: [news_list]}
             
@@ -136,7 +125,6 @@ class TeleNewsBot:
                 base_news = base_news_map.get(base_kw, [])
                 keyword_news_map[base_kw] = base_news
                 all_news.extend(base_news)
-                logger.info(f"키워드 '{keyword}': OR 연산, 키워드 '{base_kw}'에서 {len(base_news)}개 뉴스")
             
             # 2. 중복 제거
             seen_urls = set()
@@ -146,11 +134,8 @@ class TeleNewsBot:
                     unique_news.append(news)
                     seen_urls.add(news['url'])
             
-            logger.info(f"키워드 '{keyword}': OR 연산 중복 제거 후 {len(unique_news)}개 뉴스 (전체 {len(all_news)}개 중)")
-            
             # 3. 15개 이하면 그대로 반환
             if len(unique_news) <= 15:
-                logger.info(f"키워드 '{keyword}': OR 연산 결과 {len(unique_news)}개 뉴스 (15개 이하)")
                 return unique_news
             
             # 4. 15개 초과 시 비례 배분
@@ -182,7 +167,6 @@ class TeleNewsBot:
         else:
             # 단일 키워드
             result = base_news_map.get(base_keywords[0], [])
-            logger.info(f"키워드 '{keyword}': 단일 키워드 '{base_keywords[0]}'에서 {len(result)}개 뉴스")
             return result[:15]  # 15개 제한
     
     def unblock_user_if_needed(self, user_id):
@@ -1112,8 +1096,6 @@ class TeleNewsBot:
     async def check_news_updates(self):
         """뉴스 업데이트 확인 (스케줄러용 - 키워드 중복 제거 + 캐시 활용)"""
         try:
-            logger.info("=== 뉴스 업데이트 체크 시작 ===")
-            
             # 7일 이상 오래된 뉴스 기록 삭제
             self.db.cleanup_old_news(days=7)
             
@@ -1121,14 +1103,10 @@ class TeleNewsBot:
             user_keywords = self.db.get_all_user_keywords_except_blocked()
             
             if not user_keywords:
-                logger.info("등록된 키워드가 없습니다.")
                 return
             
             # 2. 키워드 분해 및 고유 기본 키워드 추출
             unique_base_keywords, keyword_mapping = self.get_unique_base_keywords(user_keywords)
-            
-            logger.info(f"고유 기본 키워드: {len(unique_base_keywords)}개")
-            logger.info(f"기본 키워드: {unique_base_keywords}")
             
             # 3. 기본 키워드에 대해서만 API 호출
             base_news_map = {}
@@ -1143,43 +1121,30 @@ class TeleNewsBot:
             for user_id, keyword in user_keywords:
                 user_keyword_map[user_id].append(keyword)
             
-            logger.info(f"{len(user_keyword_map)}명의 사용자, 총 {len(user_keywords)}개 키워드")
-            
             # 5. 사용자별로 처리
             for user_id, keywords in user_keyword_map.items():
                 try:
                     # 방해금지 시간 체크
                     if self.is_quiet_time(user_id):
-                        logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀")
                         continue
                     
                     # 사용자의 모든 키워드에 대한 뉴스 수집 (복합연산 적용)
                     for keyword in keywords:
-                        logger.info(f"사용자 {user_id} - 키워드 '{keyword}' 처리 시작")
-                        
                         # 복합연산 적용
                         combined_news = self.apply_operation(keyword, base_news_map)
-                        logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 복합연산 결과 {len(combined_news)}개 뉴스")
                         
                         if combined_news:
                             # 각 뉴스에 키워드 정보 추가
                             for news in combined_news:
                                 news['_keyword'] = keyword
                             
-                            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 전송 시작")
                             # 개별 키워드별로 뉴스 전송 (자동 알림)
                             await self._send_news_to_user(user_id, keyword, combined_news, manual_check=False)
-                        else:
-                            logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 없음")
-                    
-                    logger.info(f"사용자 {user_id} - {len(keywords)}개 키워드 처리 완료")
                     
                 except Exception as e:
                     logger.error(f"사용자 {user_id} 처리 중 오류: {e}")
                     import traceback
                     logger.error(traceback.format_exc())
-            
-            logger.info("=== 뉴스 업데이트 체크 완료 ===")
         except Exception as e:
             logger.error(f"뉴스 업데이트 체크 전체 오류: {e}")
             import traceback
@@ -1343,7 +1308,6 @@ class TeleNewsBot:
     
     async def _send_news_to_user(self, user_id, keyword, news_list, manual_check=False):
         """특정 사용자에게 뉴스 전송 (키워드별 최적화용)"""
-        logger.info(f"사용자 {user_id} - 키워드 '{keyword}': _send_news_to_user 시작, 입력 뉴스 {len(news_list)}개, 수동확인: {manual_check}")
         
         # 방해금지 시간 체크
         if self.is_quiet_time(user_id):
@@ -1356,23 +1320,16 @@ class TeleNewsBot:
             if not self.db.is_news_sent(user_id, keyword, news['url']):
                 new_news.append(news)
         
-        logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 {len(new_news)}개 (전체 {len(news_list)}개 중)")
-        
-        # 새로운 뉴스가 0개인 경우 추가 정보 로그
+        # 새로운 뉴스가 0개인 경우 처리
         if len(new_news) == 0:
-            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 모든 뉴스가 이미 본 뉴스입니다.")
             # 수동 확인일 때만 이미 본 뉴스로 채우기 시도
             if manual_check and len(news_list) > 0:
-                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 수동확인으로 이미 본 뉴스로 15개 채우기 시도")
                 base_keywords = self.normalize_keyword(keyword)
                 additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15)
                 if additional_news:
                     new_news = additional_news
-                    logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 {len(additional_news)}개 추가")
                 else:
                     logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 추가할 이미 본 뉴스 없음")
-            elif not manual_check:
-                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 자동알림이므로 이미 본 뉴스로 채우지 않음")
         
         # 새 뉴스를 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
         if new_news:
@@ -1380,18 +1337,14 @@ class TeleNewsBot:
             
             # 새 뉴스가 15개 미만이면 수동 확인일 때만 이미 본 뉴스로 채우기
             if len(new_news) < 15 and manual_check:
-                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 {len(new_news)}개, 수동확인으로 이미 본 뉴스로 {15 - len(new_news)}개 추가")
                 base_keywords = self.normalize_keyword(keyword)
                 additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15 - len(new_news))
                 if additional_news:
                     new_news.extend(additional_news)
                     new_news = self._sort_news_by_date(new_news)
-                    logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 총 {len(new_news)}개 뉴스로 채움")
         
         # 새 뉴스가 있으면 전송
         if new_news:
-            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 메시지 생성 시작")
-            
             # 총 관련 기사 수 계산
             total_similar = sum(news.get('similar_count', 1) for news in new_news)
             
@@ -1439,7 +1392,6 @@ class TeleNewsBot:
                 message += "──────────────\n\n"
             
             # 메시지 전송 시도
-            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 텔레그램 메시지 전송 시도")
             success = await self.send_message_to_user(user_id, message)
             
             # 전송 성공한 경우에만 DB에 기록 및 메시지 저장
@@ -1448,7 +1400,6 @@ class TeleNewsBot:
                     self.db.mark_news_sent(user_id, keyword, news['url'], news['title'])
                 # 직전 메시지 DB 저장 (수동 확인용)
                 self.db.save_last_message(user_id, keyword, message)
-                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': {len(new_news)}개의 새 뉴스 전송 성공")
             else:
                 logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 전송 실패")
         else:
@@ -1538,7 +1489,6 @@ class TeleNewsBot:
             # 부족한 만큼만 선택
             additional_news = seen_news[:needed_count]
             
-            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 {len(additional_news)}개 추가")
             return additional_news
             
         except Exception as e:
@@ -1695,9 +1645,7 @@ class TeleNewsBot:
             
             # 메시지 전송 (DB에는 저장하지 않음 - 이미 본 뉴스이므로)
             success = await self.send_message_to_user(user_id, message)
-            if success:
-                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 {len(latest_news)}개 전송 성공")
-            else:
+            if not success:
                 logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 전송 실패")
                 
         except Exception as e:
@@ -1715,8 +1663,6 @@ class TeleNewsBot:
         if manual_check:
             # 수동 확인: 최신 뉴스 확인 후, 없으면 직전 메시지 재전송
             for keyword in keywords:
-                logger.info(f"사용자 {user_id} - {keyword} 수동 확인")
-                
                 try:
                     # 1. 기본 키워드들 추출
                     base_keywords = self.normalize_keyword(keyword)
@@ -1730,15 +1676,12 @@ class TeleNewsBot:
                     
                     # 3. 복합연산 적용
                     combined_news = self.apply_operation(keyword, base_news_map)
-                    logger.info(f"사용자 {user_id} - {keyword} 복합연산 결과: {len(combined_news)}개 뉴스")
                     
                     if combined_news:
                         # 4. 새로운 뉴스가 있으면 전송 + DB 저장
-                        logger.info(f"사용자 {user_id} - {keyword} 새로운 뉴스 처리 시작")
                         await self._send_news_to_user(user_id, keyword, combined_news, manual_check=True)
                     else:
                         # 5. 새로운 뉴스가 없으면 이미 본 뉴스 15개로 메시지 생성해서 전송
-                        logger.info(f"사용자 {user_id} - {keyword} 새로운 뉴스 없음, 이미 본 뉴스 15개로 메시지 생성")
                         await self._send_seen_news_message(user_id, keyword, base_keywords)
                         
                 except Exception as e:

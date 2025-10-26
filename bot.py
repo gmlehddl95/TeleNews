@@ -30,6 +30,62 @@ class TeleNewsBot:
         self.scheduler = AsyncIOScheduler()
         self.application = None
         self.waiting_for_keyword = {}  # 사용자가 키워드 입력 대기 중인지 추적
+        self.message_cache = {}  # {keyword: last_message} - 수동 확인용 메시지 캐시
+    
+    def normalize_keyword(self, keyword):
+        """복합연산 키워드를 기본 키워드로 분해"""
+        if " and " in keyword.lower():
+            return [kw.strip() for kw in keyword.split(" and ")]
+        elif " or " in keyword.lower():
+            return [kw.strip() for kw in keyword.split(" or ")]
+        else:
+            return [keyword.strip()]
+    
+    def get_unique_base_keywords(self, user_keywords):
+        """고유한 기본 키워드만 추출"""
+        base_keywords = set()
+        keyword_mapping = {}  # 원본 키워드 → 기본 키워드들
+        
+        for user_id, keyword in user_keywords:
+            normalized = self.normalize_keyword(keyword)
+            base_keywords.update(normalized)
+            keyword_mapping[keyword] = normalized
+        
+        return list(base_keywords), keyword_mapping
+    
+    def apply_operation(self, keyword, base_news_map):
+        """복합연산에 따라 뉴스 조합"""
+        base_keywords = self.normalize_keyword(keyword)
+        
+        if " and " in keyword.lower():
+            # AND 연산: 교집합
+            if not base_keywords:
+                return []
+            
+            result = base_news_map.get(base_keywords[0], [])
+            for base_kw in base_keywords[1:]:
+                base_news = base_news_map.get(base_kw, [])
+                # URL 기준으로 교집합 계산
+                result_urls = {news['url'] for news in result}
+                base_urls = {news['url'] for news in base_news}
+                common_urls = result_urls.intersection(base_urls)
+                result = [news for news in result if news['url'] in common_urls]
+            return result
+            
+        elif " or " in keyword.lower():
+            # OR 연산: 합집합
+            result = []
+            seen_urls = set()
+            for base_kw in base_keywords:
+                base_news = base_news_map.get(base_kw, [])
+                for news in base_news:
+                    if news['url'] not in seen_urls:
+                        result.append(news)
+                        seen_urls.add(news['url'])
+            return result
+        else:
+            # 단일 키워드
+            return base_news_map.get(base_keywords[0], [])
     
     def unblock_user_if_needed(self, user_id):
         """사용자가 봇을 다시 사용하려고 할 때 차단 목록에서 제거"""
@@ -958,20 +1014,34 @@ class TeleNewsBot:
             pass  # 이미 삭제되었거나 삭제 권한이 없는 경우 무시
     
     async def check_news_updates(self):
-        """뉴스 업데이트 확인 (스케줄러용 - 사용자별로 전체 키워드 뉴스 필터링)"""
+        """뉴스 업데이트 확인 (스케줄러용 - 키워드 중복 제거 + 캐시 활용)"""
         try:
             logger.info("=== 뉴스 업데이트 체크 시작 ===")
             
             # 7일 이상 오래된 뉴스 기록 삭제
             self.db.cleanup_old_news(days=7)
             
+            # 1. 모든 사용자 키워드 수집
             user_keywords = self.db.get_all_user_keywords_except_blocked()
             
             if not user_keywords:
                 logger.info("등록된 키워드가 없습니다.")
                 return
             
-            # 사용자별로 그룹화
+            # 2. 키워드 분해 및 고유 기본 키워드 추출
+            unique_base_keywords, keyword_mapping = self.get_unique_base_keywords(user_keywords)
+            
+            logger.info(f"고유 기본 키워드: {len(unique_base_keywords)}개")
+            logger.info(f"기본 키워드: {unique_base_keywords}")
+            
+            # 3. 기본 키워드에 대해서만 API 호출
+            base_news_map = {}
+            for base_kw in unique_base_keywords:
+                news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
+                base_news_map[base_kw] = news_list
+                await asyncio.sleep(0.3)  # API 부하 분산
+            
+            # 4. 사용자별로 그룹화
             from collections import defaultdict
             user_keyword_map = defaultdict(list)  # {user_id: [keyword1, keyword2, ...]}
             for user_id, keyword in user_keywords:
@@ -979,7 +1049,7 @@ class TeleNewsBot:
             
             logger.info(f"{len(user_keyword_map)}명의 사용자, 총 {len(user_keywords)}개 키워드")
             
-            # 사용자별로 처리
+            # 5. 사용자별로 처리
             for user_id, keywords in user_keyword_map.items():
                 try:
                     # 방해금지 시간 체크
@@ -987,42 +1057,22 @@ class TeleNewsBot:
                         logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀")
                         continue
                     
-                    # 사용자의 모든 키워드에 대한 뉴스 수집
-                    all_news_by_keyword = {}  # {keyword: [news_list]}
+                    # 사용자의 모든 키워드에 대한 뉴스 수집 (복합연산 적용)
+                    user_news = {}  # {keyword: [news_list]}
                     for keyword in keywords:
-                        news_list = self.news_crawler.get_latest_news(keyword, last_check_count=15)
-                        if news_list:
+                        # 복합연산 적용
+                        combined_news = self.apply_operation(keyword, base_news_map)
+                        if combined_news:
                             # 각 뉴스에 키워드 정보 추가
-                            for news in news_list:
+                            for news in combined_news:
                                 news['_keyword'] = keyword
-                            all_news_by_keyword[keyword] = news_list
-                        await asyncio.sleep(0.5)  # API 부하 분산
+                            user_news[keyword] = combined_news
                     
-                    if not all_news_by_keyword:
+                    if not user_news:
                         continue
                     
-                    # 모든 뉴스를 하나의 리스트로 합침
-                    all_news = []
-                    for news_list in all_news_by_keyword.values():
-                        all_news.extend(news_list)
-                    
-                    # 전체 뉴스에서 유사뉴스 필터링 (한번만!)
-                    filtered_news = self.news_crawler.filter_similar_news(all_news, similarity_threshold=0.5)
-                    
-                    # 키워드별로 다시 분류
-                    news_by_keyword = defaultdict(list)
-                    for news in filtered_news:
-                        keyword = news.get('_keyword')
-                        if keyword:
-                            news_by_keyword[keyword].append(news)
-                    
-                    # 각 키워드별로 사용자에게 전송
-                    for keyword, news_list in news_by_keyword.items():
-                        try:
-                            await self._send_news_to_user(user_id, keyword, news_list)
-                            await asyncio.sleep(0.5)
-                        except Exception as e:
-                            logger.error(f"사용자 {user_id} - 뉴스 전송 중 오류 ({keyword}): {e}")
+                    # 배치 전송
+                    await self._send_batch_news_to_user(user_id, user_news)
                     
                     logger.info(f"사용자 {user_id} - {len(keywords)}개 키워드 처리 완료")
                     
@@ -1036,6 +1086,88 @@ class TeleNewsBot:
             logger.error(f"뉴스 업데이트 체크 전체 오류: {e}")
             import traceback
             logger.error(traceback.format_exc())
+    
+    async def _send_batch_news_to_user(self, user_id, news_by_keyword):
+        """사용자별로 통합된 뉴스 메시지 전송 (배치 전송) + 메시지 캐시 저장"""
+        # 방해금지 시간 체크
+        if self.is_quiet_time(user_id):
+            logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀")
+            return
+        
+        # 모든 키워드의 새로운 뉴스 수집
+        all_new_news = {}  # {keyword: [news_list]}
+        total_new_news = 0
+        
+        for keyword, news_list in news_by_keyword.items():
+            # 새로운 뉴스만 필터링
+            new_news = []
+            for news in news_list:
+                if not self.db.is_news_sent(user_id, keyword, news['url']):
+                    new_news.append(news)
+            
+            if new_news:
+                # 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
+                new_news = self._sort_news_by_date(new_news)
+                all_new_news[keyword] = new_news
+                total_new_news += len(new_news)
+        
+        # 새로운 뉴스가 없으면 전송하지 않음
+        if not all_new_news:
+            logger.info(f"사용자 {user_id} - 새로운 뉴스 없음")
+            return
+        
+        # 통합 메시지 생성
+        message = f"📰 <b>새로운 뉴스 알림</b>\n"
+        message += f"총 {total_new_news}건 ({len(all_new_news)}개 키워드)\n"
+        message += "═══════════════\n\n"
+        
+        # 키워드별로 뉴스 추가
+        for keyword, news_list in all_new_news.items():
+            message += f"🔍 <b>키워드: {keyword}</b> ({len(news_list)}건)\n"
+            message += "───────────────\n"
+            
+            for i, news in enumerate(news_list, 1):
+                title = news['title']
+                source = news['source']
+                date = self._format_date_simple(news['date'])
+                url = news['url']
+                similar_count = news.get('similar_count', 1)
+                
+                # 뉴스 아이콘 결정
+                icon = self._get_news_icon(news)
+                
+                # 제목 (아이콘 + 제목)
+                message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+                
+                # 관련뉴스 개수 표시
+                if icon == '⭐':
+                    if similar_count >= 2:
+                        message += f" [관련뉴스: {similar_count}건]"
+                elif similar_count > 1:
+                    message += f" [관련뉴스: {similar_count}건]"
+                
+                message += "\n"
+                
+                # 부가 정보
+                message += f"<code>{source}, {date}</code>\n"
+                message += "───────────────\n"
+            
+            message += "\n"
+        
+        # 메시지 전송 시도
+        success = await self.send_message_to_user(user_id, message)
+        
+        # 전송 성공한 경우에만 DB에 기록 및 메시지 캐시 저장
+        if success:
+            for keyword, news_list in all_new_news.items():
+                for news in news_list:
+                    self.db.mark_news_sent(user_id, keyword, news['url'], news['title'])
+                # 메시지 캐시 저장 (수동 확인용)
+                self.message_cache[keyword] = message
+            
+            logger.info(f"사용자 {user_id} - 배치 뉴스 전송 성공: {total_new_news}건 ({len(all_new_news)}개 키워드)")
+        else:
+            logger.warning(f"사용자 {user_id} - 배치 뉴스 전송 실패")
     
     def _sort_news_by_date(self, news_list):
         """뉴스를 날짜순으로 정렬 (최신 뉴스가 상단)"""
@@ -1144,20 +1276,60 @@ class TeleNewsBot:
                 logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 전송 실패")
     
     async def check_news_for_user(self, user_id, manual_check=False):
-        """특정 사용자의 뉴스 확인 (내부 함수, 메시지 없음)"""
+        """특정 사용자의 뉴스 확인 (수동 확인은 메시지 캐시 활용)"""
         keywords = self.db.get_keywords(user_id)
         
         if not keywords:
             logger.info(f"사용자 {user_id} - 등록된 키워드가 없습니다.")
             return
         
-        for keyword in keywords:
-            try:
-                await self._check_news_for_keyword(user_id, keyword, manual_check=manual_check)
-                # 키워드 간 딜레이 (수동 확인 시에도 적용)
-                await asyncio.sleep(0.5)
-            except Exception as e:
-                logger.error(f"사용자 {user_id} - 뉴스 확인 중 오류 ({keyword}): {e}")
+        if manual_check:
+            # 수동 확인: 메시지 캐시 활용
+            for keyword in keywords:
+                if keyword in self.message_cache:
+                    # 기존 키워드: 캐시된 메시지 재전송
+                    message = self.message_cache[keyword]
+                    await self.send_message_to_user(user_id, message)
+                    logger.info(f"사용자 {user_id} - {keyword} 메시지 재전송")
+                else:
+                    # 새로운 키워드: 즉시 API 호출
+                    logger.info(f"사용자 {user_id} - {keyword} 새로운 키워드, 즉시 API 호출")
+                    
+                    try:
+                        # 1. 기본 키워드들 추출
+                        base_keywords = self.normalize_keyword(keyword)
+                        
+                        # 2. 각 기본 키워드의 뉴스 수집
+                        base_news_map = {}
+                        for base_kw in base_keywords:
+                            news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
+                            base_news_map[base_kw] = news_list
+                            await asyncio.sleep(0.3)  # API 부하 분산
+                        
+                        # 3. 복합연산 적용
+                        combined_news = self.apply_operation(keyword, base_news_map)
+                        
+                        if combined_news:
+                            # 4. 뉴스 전송
+                            await self._send_news_to_user(user_id, keyword, combined_news)
+                            
+                            # 5. 메시지 캐시에 저장
+                            self.message_cache[keyword] = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n총 {len(combined_news)}건"
+                        else:
+                            await self.send_message_to_user(user_id, f"📰 '{keyword}' 키워드에 대한 뉴스를 찾을 수 없습니다.")
+                            
+                    except Exception as e:
+                        logger.error(f"새로운 키워드 처리 중 오류: {e}")
+                        await self.send_message_to_user(user_id, f"❌ '{keyword}' 키워드 처리 중 오류가 발생했습니다.")
+        else:
+            # 자동 확인: 기존 로직
+            for keyword in keywords:
+                try:
+                    await self._check_news_for_keyword(user_id, keyword, manual_check=manual_check)
+                    # 키워드 간 딜레이 (수동 확인 시에도 적용)
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    logger.error(f"사용자 {user_id} - 뉴스 확인 중 오류 ({keyword}): {e}")
     
     async def _check_news_for_keyword(self, user_id, keyword, manual_check=False):
         """특정 사용자의 키워드에 대한 뉴스 확인"""

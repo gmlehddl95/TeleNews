@@ -341,6 +341,17 @@ class NaverNewsCrawler:
                                 # 첫 번째 부분이 서브도메인이면 제거
                                 normalized_domain = '.'.join(domain_parts[1:])
                             
+                            # 블랙리스트 언론사 필터링
+                            blacklist_domains = [
+                                'bntnews.co.kr',  # BNT뉴스
+                                'www.bntnews.co.kr'
+                            ]
+                            
+                            # 블랙리스트 확인
+                            if normalized_domain in blacklist_domains or any(black_domain in normalized_domain for black_domain in blacklist_domains):
+                                logger.debug(f"블랙리스트 언론사 필터링: {normalized_domain} - {title[:50]}...")
+                                continue
+                            
                             domain_map = {
                                 'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
                                 'chosun.com': '조선일보', 'joongang.co.kr': '중앙일보',
@@ -587,6 +598,17 @@ class NaverNewsCrawler:
                                 # 첫 번째 부분이 서브도메인이면 제거
                                 normalized_domain = '.'.join(domain_parts[1:])
                             
+                            # 블랙리스트 언론사 필터링
+                            blacklist_domains = [
+                                'bntnews.co.kr',  # BNT뉴스
+                                'www.bntnews.co.kr'
+                            ]
+                            
+                            # 블랙리스트 확인
+                            if normalized_domain in blacklist_domains or any(black_domain in normalized_domain for black_domain in blacklist_domains):
+                                logger.debug(f"블랙리스트 언론사 필터링: {normalized_domain} - {title[:50]}...")
+                                continue
+                            
                             # 도메인을 언론사 이름으로 변환
                             domain_map = {
                                 'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
@@ -619,7 +641,7 @@ class NaverNewsCrawler:
                                 'etoday.co.kr': '이투데이', 'newsprime.co.kr': '프라임경제',                                 'nongmin.com': '농민신문', 'kookje.co.kr': '국제신문', 
                                 'newscj.com': '천지일보', 'pointdaily.co.kr': '포인트데일리', 
                                 'daily.hankooki.com': '데일리한국', 'einfomax.co.kr': '연합인포맥스',
-                                'view.asiae.co.kr' : "아시아경제", 'ohmynews.com' : '오마이뉴스',
+                                'ohmynews.com' : '오마이뉴스',
                                 'news.tf.co.kr': '더팩트', 'ichannela.com': '채널A',
                                 'pressian.com': '프레시안', 'bizwatch.co.kr': '비즈워치',
                                 'yonhapnewstv.co.kr': '연합뉴스TV', 'mbiz.heraldcorp.com': '헤럴드경제',

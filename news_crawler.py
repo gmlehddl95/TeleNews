@@ -333,11 +333,13 @@ class NaverNewsCrawler:
                             
                             # 도메인 정규화 (서브도메인 제거)
                             normalized_domain = domain.lower()
-                            subdomains_to_remove = ['www.', 'm.', 'mobile.', 'news.', 'view.', 'cm.']
-                            for subdomain in subdomains_to_remove:
-                                if normalized_domain.startswith(subdomain):
-                                    normalized_domain = normalized_domain[len(subdomain):]
-                                    break
+                            subdomains_to_remove = ['www', 'm', 'mobile', 'news', 'view', 'cm']
+                            
+                            # 도메인을 점으로 분리하여 첫 번째 부분이 서브도메인인지 확인
+                            domain_parts = normalized_domain.split('.')
+                            if len(domain_parts) >= 3 and domain_parts[0] in subdomains_to_remove:
+                                # 첫 번째 부분이 서브도메인이면 제거
+                                normalized_domain = '.'.join(domain_parts[1:])
                             
                             domain_map = {
                                 'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
@@ -577,11 +579,13 @@ class NaverNewsCrawler:
                             
                             # 도메인 정규화 (서브도메인 제거)
                             normalized_domain = domain.lower()
-                            subdomains_to_remove = ['www.', 'm.', 'mobile.', 'news.', 'view.', 'cm.']
-                            for subdomain in subdomains_to_remove:
-                                if normalized_domain.startswith(subdomain):
-                                    normalized_domain = normalized_domain[len(subdomain):]
-                                    break
+                            subdomains_to_remove = ['www', 'm', 'mobile', 'news', 'view', 'cm']
+                            
+                            # 도메인을 점으로 분리하여 첫 번째 부분이 서브도메인인지 확인
+                            domain_parts = normalized_domain.split('.')
+                            if len(domain_parts) >= 3 and domain_parts[0] in subdomains_to_remove:
+                                # 첫 번째 부분이 서브도메인이면 제거
+                                normalized_domain = '.'.join(domain_parts[1:])
                             
                             # 도메인을 언론사 이름으로 변환
                             domain_map = {

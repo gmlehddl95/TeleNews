@@ -1416,6 +1416,79 @@ class TeleNewsBot:
         else:
             logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 없음으로 전송하지 않음")
     
+    async def _send_latest_news_message(self, user_id, keyword, base_news_map):
+        """최신 뉴스 15개로 메시지 생성해서 전송 (이미 본 뉴스 포함)"""
+        # 방해금지 시간 체크
+        if self.is_quiet_time(user_id):
+            logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀 ({keyword})")
+            return
+        
+        # 기본 키워드들 추출
+        base_keywords = self.normalize_keyword(keyword)
+        
+        # 최신 뉴스 수집 (이미 본 뉴스 포함)
+        all_news = []
+        for base_kw in base_keywords:
+            news_list = base_news_map.get(base_kw, [])
+            all_news.extend(news_list)
+        
+        if not all_news:
+            await self.send_message_to_user(user_id, f"📰 '{keyword}' 키워드에 대한 뉴스를 찾을 수 없습니다.")
+            return
+        
+        # 중복 제거
+        seen_urls = set()
+        unique_news = []
+        for news in all_news:
+            if news['url'] not in seen_urls:
+                unique_news.append(news)
+                seen_urls.add(news['url'])
+        
+        # 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
+        unique_news = self._sort_news_by_date(unique_news)
+        
+        # 15개로 제한
+        latest_news = unique_news[:15]
+        
+        # 메시지 생성
+        message = f"📰 <b>최신 뉴스</b> (키워드: {keyword})\n"
+        message += f"💡 <i>이미 확인한 뉴스입니다.</i>\n"
+        message += f"총 {len(latest_news)}건\n"
+        message += "──────────────\n\n"
+        
+        for i, news in enumerate(latest_news, 1):
+            title = news['title']
+            source = news['source']
+            date = self._format_date_simple(news['date'])
+            url = news['url']
+            similar_count = news.get('similar_count', 1)
+            
+            # 뉴스 아이콘 결정
+            icon = self._get_news_icon(news)
+            
+            # 제목 (아이콘 + 제목)
+            message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+            
+            # 관련뉴스 개수 표시
+            if icon == '⭐':
+                if similar_count >= 2:
+                    message += f" [관련뉴스: {similar_count}건]"
+            elif similar_count > 1:
+                message += f" [관련뉴스: {similar_count}건]"
+            
+            message += "\n\n"
+            
+            # 부가 정보
+            message += f"<code>{source}, {date}</code>\n"
+            message += "──────────────\n\n"
+        
+        # 메시지 전송 (DB에는 저장하지 않음 - 이미 본 뉴스이므로)
+        success = await self.send_message_to_user(user_id, message)
+        if success:
+            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 최신 뉴스 {len(latest_news)}개 전송 성공")
+        else:
+            logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 최신 뉴스 전송 실패")
+    
     async def check_news_for_user(self, user_id, manual_check=False):
         """특정 사용자의 뉴스 확인 (수동 확인은 최신 뉴스 또는 직전 메시지 재전송)"""
         keywords = self.db.get_keywords(user_id)
@@ -1447,14 +1520,9 @@ class TeleNewsBot:
                         # 4. 새로운 뉴스가 있으면 전송 + DB 저장
                         await self._send_news_to_user(user_id, keyword, combined_news)
                     else:
-                        # 5. 새로운 뉴스가 없으면 DB에서 직전 메시지 조회해서 재전송
-                        last_message = self.db.get_last_message(user_id, keyword)
-                        if last_message:
-                            logger.info(f"사용자 {user_id} - {keyword} 새로운 뉴스 없음, 직전 메시지 재전송")
-                            await self.send_message_to_user(user_id, last_message)
-                        else:
-                            logger.info(f"사용자 {user_id} - {keyword} 새로운 뉴스 없음, 저장된 메시지도 없음")
-                            await self.send_message_to_user(user_id, f"📰 '{keyword}' 키워드에 대한 뉴스를 찾을 수 없습니다.")
+                        # 5. 새로운 뉴스가 없으면 최신 뉴스 15개로 메시지 생성해서 전송
+                        logger.info(f"사용자 {user_id} - {keyword} 새로운 뉴스 없음, 최신 뉴스 15개로 메시지 생성")
+                        await self._send_latest_news_message(user_id, keyword, base_news_map)
                         
                 except Exception as e:
                     logger.error(f"수동 확인 처리 중 오류: {e}")

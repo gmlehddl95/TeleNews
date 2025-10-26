@@ -1320,6 +1320,10 @@ class TeleNewsBot:
             if not self.db.is_news_sent(user_id, keyword, news['url']):
                 new_news.append(news)
         
+        # 디버깅: 뉴스 필터링 결과 로그 (수동확인 또는 새로운 뉴스가 있을 때만)
+        if manual_check or len(new_news) > 0:
+            logger.info(f"사용자 {user_id} - 키워드 '{keyword}': API에서 {len(news_list)}개, 새로운 뉴스 {len(new_news)}개")
+        
         # 새로운 뉴스가 0개인 경우 처리
         if len(new_news) == 0:
             # 수동 확인일 때만 이미 본 뉴스로 채우기 시도

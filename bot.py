@@ -404,7 +404,8 @@ class TeleNewsBot:
                 "💡 콤마(,)로 구분하여 여러 개 동시 입력 가능\n\n"
                 "🔹 <b>논리 연산 (AND/OR)</b>\n"
                 "• <code>삼성 and 애플</code> - 삼성과 애플 모두 관련된 기사\n"
-                "• <code>삼성 or 애플</code> - 삼성 또는 애플 관련 기사\n", 
+                "• <code>삼성 or 애플</code> - 삼성 또는 애플 관련 기사\n"
+                "and 와 or은 혼합하여 사용 불가\n", 
                 parse_mode='HTML')
             
             # 대기 상태 저장 (입력 안내 메시지 ID 저장)
@@ -832,10 +833,9 @@ class TeleNewsBot:
                 "예시: 삼성전자, AI, 나스닥\n"
                 "💡 콤마(,)로 구분하여 여러 개 동시 입력 가능\n\n"
                 "🔹 <b>논리 연산 (AND/OR)</b>\n"
-                "• <code>속보 and 삼성</code> - 속보와 삼성 모두 포함\n"
-                "• <code>삼성 or 애플</code> - 삼성 또는 애플 중 하나 이상\n"
-                "• <code>(속보 or 긴급) and 삼성</code> - 복합 조건\n"
-                "  → 속보 또는 긴급이 포함되고, 동시에 삼성도 포함\n",
+                "• <code>삼성 and 애플</code> - 삼성과 애플 모두 관련된 뉴스\n"
+                "• <code>삼성 or 애플</code> - 삼성 또는 애플과 관련된 뉴스\n"
+                "and 와 or은 혼합하여 사용 불가\n",
                 parse_mode='HTML',
                 reply_markup=reply_markup
             )

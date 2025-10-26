@@ -1129,6 +1129,7 @@ class TeleNewsBot:
                         continue
                     
                     # 사용자의 모든 키워드에 대한 뉴스 수집 (복합연산 적용)
+                    # 키워드 순서 보장을 위해 순차적으로 처리
                     for keyword in keywords:
                         # 복합연산 적용
                         combined_news = self.apply_operation(keyword, base_news_map)
@@ -1140,6 +1141,9 @@ class TeleNewsBot:
                             
                             # 개별 키워드별로 뉴스 전송 (자동 알림)
                             await self._send_news_to_user(user_id, keyword, combined_news, manual_check=False)
+                            
+                            # 키워드 간 순서 보장을 위한 딜레이
+                            await asyncio.sleep(1.0)
                     
                 except Exception as e:
                     logger.error(f"사용자 {user_id} 처리 중 오류: {e}")
@@ -1666,6 +1670,7 @@ class TeleNewsBot:
         
         if manual_check:
             # 수동 확인: 최신 뉴스 확인 후, 없으면 직전 메시지 재전송
+            # 키워드 순서 보장을 위해 순차적으로 처리
             for keyword in keywords:
                 try:
                     # 1. 기본 키워드들 추출
@@ -1687,6 +1692,9 @@ class TeleNewsBot:
                     else:
                         # 5. 새로운 뉴스가 없으면 이미 본 뉴스 15개로 메시지 생성해서 전송
                         await self._send_seen_news_message(user_id, keyword, base_keywords)
+                    
+                    # 키워드 간 순서 보장을 위한 딜레이
+                    await asyncio.sleep(1.0)
                         
                 except Exception as e:
                     logger.error(f"수동 확인 처리 중 오류: {e}")

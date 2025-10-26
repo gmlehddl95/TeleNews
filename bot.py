@@ -1096,7 +1096,6 @@ class TeleNewsBot:
                         continue
                     
                     # 사용자의 모든 키워드에 대한 뉴스 수집 (복합연산 적용)
-                    user_news = {}  # {keyword: [news_list]}
                     for keyword in keywords:
                         # 복합연산 적용
                         combined_news = self.apply_operation(keyword, base_news_map)
@@ -1104,13 +1103,9 @@ class TeleNewsBot:
                             # 각 뉴스에 키워드 정보 추가
                             for news in combined_news:
                                 news['_keyword'] = keyword
-                            user_news[keyword] = combined_news
-                    
-                    if not user_news:
-                        continue
-                    
-                    # 배치 전송
-                    await self._send_batch_news_to_user(user_id, user_news)
+                            
+                            # 개별 키워드별로 뉴스 전송
+                            await self._send_news_to_user(user_id, keyword, combined_news)
                     
                     logger.info(f"사용자 {user_id} - {len(keywords)}개 키워드 처리 완료")
                     
@@ -1337,10 +1332,12 @@ class TeleNewsBot:
             # 메시지 전송 시도
             success = await self.send_message_to_user(user_id, message)
             
-            # 전송 성공한 경우에만 DB에 기록
+            # 전송 성공한 경우에만 DB에 기록 및 메시지 캐시 저장
             if success:
                 for news in new_news:
                     self.db.mark_news_sent(user_id, keyword, news['url'], news['title'])
+                # 메시지 캐시 저장 (수동 확인용)
+                self.message_cache[keyword] = message
                 logger.info(f"사용자 {user_id} - 키워드 '{keyword}': {len(new_news)}개의 새 뉴스 전송 성공")
             else:
                 logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 전송 실패")

@@ -1537,29 +1537,30 @@ class TeleNewsBot:
     
     def setup_scheduler(self):
         """스케줄러 설정"""
-        # 뉴스 체크 - 주기적으로
+        # 뉴스 체크 - 정각부터 10분 단위로
         self.scheduler.add_job(
             self.check_news_updates,
-            'interval',
-            minutes=NEWS_CHECK_INTERVAL,
+            'cron',
+            minute='*/10',  # 0, 10, 20, 30, 40, 50분에 실행
             id='news_check',
             max_instances=1,  # 동시 실행 방지
             coalesce=True,    # 누락된 작업 병합
             misfire_grace_time=300  # 5분 이내 누락은 허용
         )
-        logger.info(f"뉴스 체크 스케줄러 등록: {NEWS_CHECK_INTERVAL}분 간격")
+        logger.info("뉴스 체크 스케줄러 등록: 정각부터 10분 단위 (0, 10, 20, 30, 40, 50분)")
         
-        # 주가 체크 - 2시간마다 (하락률 기반 알림)
+        # 주가 체크 - 정각부터 2시간 단위로 (0시, 2시, 4시, 6시, 8시, 10시, 12시, 14시, 16시, 18시, 20시, 22시)
         self.scheduler.add_job(
             self.check_stock_drop_alerts,
-            'interval',
-            hours=2,
+            'cron',
+            hour='*/2',  # 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22시에 실행
+            minute=0,    # 정각에 실행
             id='stock_drop_check',
             max_instances=1,  # 동시 실행 방지
             coalesce=True,    # 누락된 작업 병합
             misfire_grace_time=600  # 10분 이내 누락은 허용
         )
-        logger.info("주가 하락 알림 스케줄러 등록: 2시간 간격 (5%부터 1%p 단위로 최초 1회 알림)")
+        logger.info("주가 하락 알림 스케줄러 등록: 정각부터 2시간 단위 (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22시)")
         
         self.scheduler.start()
         logger.info("스케줄러 시작됨")

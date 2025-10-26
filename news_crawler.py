@@ -623,7 +623,7 @@ class NaverNewsCrawler:
                                 'news1.kr': '뉴스1', 'newsis.com': '뉴시스',
                                 'newspim.com': '뉴스핌', 'newsway.co.kr': '뉴스웨이',
                                 'nocutnews.co.kr': '노컷뉴스', 'breaknews.com': '브레이크뉴스',
-                                'kbs.co.kr': 'KBS', 'imbc.com': 'MBC',
+                                'kbs.co.kr': 'KBS', 'imbc.com': 'MBC', 'dailian.co.kr': '데일리안',
                                 'sbs.co.kr': 'SBS', 'jtbc.co.kr': 'JTBC',
                                 'news.jtbc.co.kr': 'JTBC', 'tvchosun.com': 'TV조선',
                                 'mbntv.co.kr': 'MBN', 'ytn.co.kr': 'YTN',

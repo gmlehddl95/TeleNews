@@ -153,9 +153,9 @@ class Database:
         return deleted_count
     
     def get_keywords(self, user_id):
-        """특정 사용자의 모든 키워드 조회"""
+        """특정 사용자의 모든 키워드 조회 (추가 순서대로)"""
         cursor = self.conn.cursor()
-        cursor.execute('SELECT keyword FROM keywords WHERE user_id = %s', (user_id,))
+        cursor.execute('SELECT keyword FROM keywords WHERE user_id = %s ORDER BY id', (user_id,))
         return [row[0] for row in cursor.fetchall()]
     
     def get_all_user_keywords(self):

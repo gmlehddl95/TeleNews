@@ -30,7 +30,6 @@ class TeleNewsBot:
         self.scheduler = AsyncIOScheduler()
         self.application = None
         self.waiting_for_keyword = {}  # 사용자가 키워드 입력 대기 중인지 추적
-        self.message_cache = {}  # {keyword: last_message} - 수동 확인용 메시지 캐시
     
     
     def normalize_keyword(self, keyword):
@@ -1256,45 +1255,11 @@ class TeleNewsBot:
         # 메시지 전송 시도
         success = await self.send_message_to_user(user_id, message)
         
-        # 전송 성공한 경우에만 DB에 기록 및 메시지 캐시 저장
+        # 전송 성공한 경우에만 DB에 기록
         if success:
             for keyword, news_list in all_new_news.items():
                 for news in news_list:
                     self.db.mark_news_sent(user_id, keyword, news['url'], news['title'])
-                
-                # 개별 키워드별 메시지 생성 및 캐시 저장
-                keyword_message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
-                keyword_message += f"총 {len(news_list)}건\n"
-                keyword_message += "──────────────\n\n"
-                
-                for i, news in enumerate(news_list, 1):
-                    title = news['title']
-                    source = news['source']
-                    date = self._format_date_simple(news['date'])
-                    url = news['url']
-                    similar_count = news.get('similar_count', 1)
-                    
-                    # 뉴스 아이콘 결정
-                    icon = self._get_news_icon(news)
-                    
-                    # 제목 (아이콘 + 제목)
-                    keyword_message += f"<a href='{url}'><b>{icon} {title}</b></a>"
-                    
-                    # 관련뉴스 개수 표시
-                    if icon == '⭐':
-                        if similar_count >= 2:
-                            keyword_message += f" [관련뉴스: {similar_count}건]"
-                    elif similar_count > 1:
-                        keyword_message += f" [관련뉴스: {similar_count}건]"
-                    
-                    keyword_message += "\n\n"
-                    
-                    # 부가 정보
-                    keyword_message += f"<code>{source}, {date}</code>\n"
-                    keyword_message += "──────────────\n\n"
-                
-                # 개별 키워드 메시지 캐시 저장
-                self.message_cache[keyword] = keyword_message
             
             logger.info(f"사용자 {user_id} - 배치 뉴스 전송 성공: {total_new_news}건 ({len(all_new_news)}개 키워드)")
         else:
@@ -1405,12 +1370,10 @@ class TeleNewsBot:
             logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 텔레그램 메시지 전송 시도")
             success = await self.send_message_to_user(user_id, message)
             
-            # 전송 성공한 경우에만 DB에 기록 및 메시지 캐시 저장
+            # 전송 성공한 경우에만 DB에 기록
             if success:
                 for news in new_news:
                     self.db.mark_news_sent(user_id, keyword, news['url'], news['title'])
-                # 메시지 캐시 저장 (수동 확인용)
-                self.message_cache[keyword] = message
                 logger.info(f"사용자 {user_id} - 키워드 '{keyword}': {len(new_news)}개의 새 뉴스 전송 성공")
             else:
                 logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 뉴스 전송 실패")
@@ -1418,7 +1381,7 @@ class TeleNewsBot:
             logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 없음으로 전송하지 않음")
     
     async def check_news_for_user(self, user_id, manual_check=False):
-        """특정 사용자의 뉴스 확인 (수동 확인은 메시지 캐시 활용)"""
+        """특정 사용자의 뉴스 확인 (수동 확인은 항상 최신 뉴스 가져오기)"""
         keywords = self.db.get_keywords(user_id)
         
         if not keywords:
@@ -1426,73 +1389,33 @@ class TeleNewsBot:
             return
         
         if manual_check:
-            # 수동 확인: 메시지 캐시 활용
+            # 수동 확인: 항상 최신 뉴스 가져오기 (메시지 캐시 사용 안함)
             for keyword in keywords:
-                if keyword in self.message_cache:
-                    # 기존 키워드: 캐시된 메시지 재전송
-                    message = self.message_cache[keyword]
-                    await self.send_message_to_user(user_id, message)
-                    logger.info(f"사용자 {user_id} - {keyword} 메시지 재전송")
-                else:
-                    # 새로운 키워드: 즉시 API 호출
-                    logger.info(f"사용자 {user_id} - {keyword} 새로운 키워드, 즉시 API 호출")
+                logger.info(f"사용자 {user_id} - {keyword} 수동 확인, 최신 뉴스 가져오기")
+                
+                try:
+                    # 1. 기본 키워드들 추출
+                    base_keywords = self.normalize_keyword(keyword)
                     
-                    try:
-                        # 1. 기본 키워드들 추출
-                        base_keywords = self.normalize_keyword(keyword)
+                    # 2. 각 기본 키워드의 뉴스 수집
+                    base_news_map = {}
+                    for base_kw in base_keywords:
+                        news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
+                        base_news_map[base_kw] = news_list
+                        await asyncio.sleep(0.3)  # API 부하 분산
+                    
+                    # 3. 복합연산 적용
+                    combined_news = self.apply_operation(keyword, base_news_map)
+                    
+                    if combined_news:
+                        # 4. 뉴스 전송 (사용자별 is_news_sent 체크 포함)
+                        await self._send_news_to_user(user_id, keyword, combined_news)
+                    else:
+                        await self.send_message_to_user(user_id, f"📰 '{keyword}' 키워드에 대한 뉴스를 찾을 수 없습니다.")
                         
-                        # 2. 각 기본 키워드의 뉴스 수집
-                        base_news_map = {}
-                        for base_kw in base_keywords:
-                            news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
-                            base_news_map[base_kw] = news_list
-                            await asyncio.sleep(0.3)  # API 부하 분산
-                        
-                        # 3. 복합연산 적용
-                        combined_news = self.apply_operation(keyword, base_news_map)
-                        
-                        if combined_news:
-                            # 4. 뉴스 전송
-                            await self._send_news_to_user(user_id, keyword, combined_news)
-                            
-                            # 5. 메시지 캐시에 저장 (실제 뉴스 내용 포함)
-                            keyword_message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
-                            keyword_message += f"총 {len(combined_news)}건\n"
-                            keyword_message += "──────────────\n\n"
-                            
-                            for i, news in enumerate(combined_news, 1):
-                                title = news['title']
-                                source = news['source']
-                                date = self._format_date_simple(news['date'])
-                                url = news['url']
-                                similar_count = news.get('similar_count', 1)
-                                
-                                # 뉴스 아이콘 결정
-                                icon = self._get_news_icon(news)
-                                
-                                # 제목 (아이콘 + 제목)
-                                keyword_message += f"<a href='{url}'><b>{icon} {title}</b></a>"
-                                
-                                # 관련뉴스 개수 표시
-                                if icon == '⭐':
-                                    if similar_count >= 2:
-                                        keyword_message += f" [관련뉴스: {similar_count}건]"
-                                elif similar_count > 1:
-                                    keyword_message += f" [관련뉴스: {similar_count}건]"
-                                
-                                keyword_message += "\n\n"
-                                
-                                # 부가 정보
-                                keyword_message += f"<code>{source}, {date}</code>\n"
-                                keyword_message += "──────────────\n\n"
-                            
-                            self.message_cache[keyword] = keyword_message
-                        else:
-                            await self.send_message_to_user(user_id, f"📰 '{keyword}' 키워드에 대한 뉴스를 찾을 수 없습니다.")
-                            
-                    except Exception as e:
-                        logger.error(f"새로운 키워드 처리 중 오류: {e}")
-                        await self.send_message_to_user(user_id, f"❌ '{keyword}' 키워드 처리 중 오류가 발생했습니다.")
+                except Exception as e:
+                    logger.error(f"수동 확인 처리 중 오류: {e}")
+                    await self.send_message_to_user(user_id, f"❌ '{keyword}' 키워드 처리 중 오류가 발생했습니다.")
         else:
             # 자동 확인: 기존 로직
             for keyword in keywords:

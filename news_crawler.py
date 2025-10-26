@@ -10,7 +10,7 @@ from config import NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 from difflib import SequenceMatcher
 
 def clean_text(text):
-    """HTML 태그를 안전하게 변환하는 함수"""
+    """HTML 태그와 BBCode 태그를 안전하게 제거하는 함수"""
     if not text:
         return ''
     
@@ -19,6 +19,10 @@ def clean_text(text):
     
     # HTML 태그를 대괄호로 변환
     text = text.replace('<', '[').replace('>', ']')
+    
+    # BBCode 태그 제거 (굵은 글씨, 기울임 등)
+    text = re.sub(r'\[/?[biu]\]', '', text)  # [b], [/b], [i], [/i], [u], [/u]
+    text = re.sub(r'\[/?[a-z]+\]', '', text)  # 기타 BBCode 태그들
     
     return text.strip()
 

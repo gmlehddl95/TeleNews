@@ -1361,9 +1361,9 @@ class TeleNewsBot:
         # 새로운 뉴스가 0개인 경우 추가 정보 로그
         if len(new_news) == 0:
             logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 모든 뉴스가 이미 본 뉴스입니다.")
-            # 이미 본 뉴스로 채우기 시도
-            if len(news_list) > 0:
-                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스로 15개 채우기 시도")
+            # 수동 확인일 때만 이미 본 뉴스로 채우기 시도
+            if manual_check and len(news_list) > 0:
+                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 수동확인으로 이미 본 뉴스로 15개 채우기 시도")
                 base_keywords = self.normalize_keyword(keyword)
                 additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15)
                 if additional_news:
@@ -1371,14 +1371,16 @@ class TeleNewsBot:
                     logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 이미 본 뉴스 {len(additional_news)}개 추가")
                 else:
                     logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 추가할 이미 본 뉴스 없음")
+            elif not manual_check:
+                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 자동알림이므로 이미 본 뉴스로 채우지 않음")
         
         # 새 뉴스를 날짜순으로 정렬 (최신 뉴스가 상단에 오도록)
         if new_news:
             new_news = self._sort_news_by_date(new_news)
             
-            # 새 뉴스가 15개 미만이면 이미 본 뉴스로 채우기
-            if len(new_news) < 15:
-                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 {len(new_news)}개, 이미 본 뉴스로 {15 - len(new_news)}개 추가")
+            # 새 뉴스가 15개 미만이면 수동 확인일 때만 이미 본 뉴스로 채우기
+            if len(new_news) < 15 and manual_check:
+                logger.info(f"사용자 {user_id} - 키워드 '{keyword}': 새로운 뉴스 {len(new_news)}개, 수동확인으로 이미 본 뉴스로 {15 - len(new_news)}개 추가")
                 base_keywords = self.normalize_keyword(keyword)
                 additional_news = self._get_additional_news(user_id, keyword, base_keywords, 15 - len(new_news))
                 if additional_news:

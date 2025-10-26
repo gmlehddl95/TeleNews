@@ -34,6 +34,45 @@ def clean_text(text):
 # 로깅 설정
 logger = logging.getLogger(__name__)
 
+# 공통 도메인 맵 (포괄적인 언론사 목록)
+COMMON_DOMAIN_MAP = {
+    'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
+    'chosun.com': '조선일보', 'joongang.co.kr': '중앙일보',
+    'donga.com': '동아일보', 'hani.co.kr': '한겨레',
+    'khan.co.kr': '경향신문', 'kmib.co.kr': '국민일보',
+    'segye.com': '세계일보', 'munhwa.com': '문화일보',
+    'seoul.co.kr': '서울신문', 'hankookilbo.com': '한국일보',
+    'mk.co.kr': '매일경제', 'hankyung.com': '한국경제',
+    'mt.co.kr': '머니투데이', 'edaily.co.kr': '이데일리',
+    'etnews.com': '전자신문', 'dt.co.kr': '디지털타임스',
+    'news1.kr': '뉴스1', 'newsis.com': '뉴시스',
+    'newspim.com': '뉴스핌', 'newsway.co.kr': '뉴스웨이',
+    'nocutnews.co.kr': '노컷뉴스', 'breaknews.com': '브레이크뉴스',
+    'kbs.co.kr': 'KBS', 'imbc.com': 'MBC', 'dailian.co.kr': '데일리안',
+    'sbs.co.kr': 'SBS', 'jtbc.co.kr': 'JTBC',
+    'news.jtbc.co.kr': 'JTBC', 'tvchosun.com': 'TV조선',
+    'mbntv.co.kr': 'MBN', 'ytn.co.kr': 'YTN',
+    'osen.co.kr': 'OSEN', 'xportsnews.com': '엑스포츠뉴스',
+    'topstarnews.net': '톱스타뉴스', 'starnewskorea.com': '스타뉴스',
+    'sedaily.com': '서울경제', 'fnnews.com': '파이낸셜뉴스',
+    'biz.chosun.com': '조선비즈', 'wowtv.co.kr': '한국경제TV',
+    'hellot.net': '헬로티', 'ekn.kr': '에너지경제',
+    'newsworks.co.kr': '뉴스웍스', 'bntnews.co.kr': 'BNT뉴스',
+    'slownews.kr': '슬로우뉴스',
+    'imaeil.com': '매일신문', 'biz.heraldcorp.com': '해럴드경제',
+    'heraldcorp.com': '헤럴드경제', 'womaneconomy.co.kr': '여성경제신문',
+    'asiae.co.kr': '아시아경제', 'busan.com': '부산일보',
+    'kado.net': '강원도민일보', 'pennmike.com': '펜엔마이크',
+    'etoday.co.kr': '이투데이', 'newsprime.co.kr': '프라임경제',
+    'nongmin.com': '농민신문', 'kookje.co.kr': '국제신문', 
+    'newscj.com': '천지일보', 'pointdaily.co.kr': '포인트데일리', 
+    'daily.hankooki.com': '데일리한국', 'einfomax.co.kr': '연합인포맥스',
+    'ohmynews.com': '오마이뉴스',
+    'news.tf.co.kr': '더팩트', 'ichannela.com': '채널A',
+    'pressian.com': '프레시안', 'bizwatch.co.kr': '비즈워치',
+    'yonhapnewstv.co.kr': '연합뉴스TV', 'mbiz.heraldcorp.com': '헤럴드경제'
+}
+
 class NaverNewsCrawler:
     def __init__(self):
         self.client_id = NAVER_CLIENT_ID
@@ -371,18 +410,7 @@ class NaverNewsCrawler:
                                 logger.debug(f"블랙리스트 언론사 필터링: {normalized_domain} - {title[:50]}...")
                                 continue
                             
-                            domain_map = {
-                                'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
-                                'chosun.com': '조선일보', 'joongang.co.kr': '중앙일보',
-                                'donga.com': '동아일보', 'hani.co.kr': '한겨레',
-                                'khan.co.kr': '경향신문', 'kmib.co.kr': '국민일보',
-                                'mk.co.kr': '매일경제', 'hankyung.com': '한국경제',
-                                'mt.co.kr': '머니투데이', 'edaily.co.kr': '이데일리',
-                                'kbs.co.kr': 'KBS', 'imbc.com': 'MBC', 'sbs.co.kr': 'SBS',
-                                'jtbc.co.kr': 'JTBC', 'ytn.co.kr': 'YTN'
-                            }
-                            
-                            for key, value in domain_map.items():
+                            for key, value in COMMON_DOMAIN_MAP.items():
                                 if key in normalized_domain:
                                     source = value
                                     break
@@ -626,46 +654,7 @@ class NaverNewsCrawler:
                                 continue
                             
                             # 도메인을 언론사 이름으로 변환
-                            domain_map = {
-                                'yna.co.kr': '연합뉴스', 'yonhapnews.co.kr': '연합뉴스',
-                                'chosun.com': '조선일보', 'joongang.co.kr': '중앙일보',
-                                'donga.com': '동아일보', 'hani.co.kr': '한겨레',
-                                'khan.co.kr': '경향신문', 'kmib.co.kr': '국민일보',
-                                'segye.com': '세계일보', 'munhwa.com': '문화일보',
-                                'seoul.co.kr': '서울신문', 'hankookilbo.com': '한국일보',
-                                'mk.co.kr': '매일경제', 'hankyung.com': '한국경제',
-                                'mt.co.kr': '머니투데이', 'edaily.co.kr': '이데일리',
-                                'etnews.com': '전자신문', 'dt.co.kr': '디지털타임스',
-                                'news1.kr': '뉴스1', 'newsis.com': '뉴시스',
-                                'newspim.com': '뉴스핌', 'newsway.co.kr': '뉴스웨이',
-                                'nocutnews.co.kr': '노컷뉴스', 'breaknews.com': '브레이크뉴스',
-                                'kbs.co.kr': 'KBS', 'imbc.com': 'MBC', 'dailian.co.kr': '데일리안',
-                                'sbs.co.kr': 'SBS', 'jtbc.co.kr': 'JTBC',
-                                'news.jtbc.co.kr': 'JTBC', 'tvchosun.com': 'TV조선',
-                                'mbntv.co.kr': 'MBN', 'ytn.co.kr': 'YTN',
-                                'osen.co.kr': 'OSEN', 'xportsnews.com': '엑스포츠뉴스',
-                                'topstarnews.net': '톱스타뉴스', 'starnewskorea.com': '스타뉴스',
-                                'sedaily.com': '서울경제', 'fnnews.com': '파이낸셜뉴스',
-                                'biz.chosun.com': '조선비즈', 'wowtv.co.kr': '한국경제TV',
-                                'hellot.net': '헬로티', 'ekn.kr': '에너지경제',
-                                'newsworks.co.kr': '뉴스웍스', 'bntnews.co.kr': 'BNT뉴스',
-                                'slownews.kr': '슬로우뉴스',
-                                'imaeil.com': '매일신문', 'biz.heraldcorp.com': '해럴드경제',
-                                'heraldcorp.com': '헤럴드경제', 'womaneconomy.co.kr': '여성경제신문',
-                                'asiae.co.kr': '아시아경제', 'busan.com': '부산일보',
-                                'kado.net': '강원도민일보', 'pennmike.com': '펜엔마이크',
-                                'etoday.co.kr': '이투데이', 'newsprime.co.kr': '프라임경제',                                 'nongmin.com': '농민신문', 'kookje.co.kr': '국제신문', 
-                                'newscj.com': '천지일보', 'pointdaily.co.kr': '포인트데일리', 
-                                'daily.hankooki.com': '데일리한국', 'einfomax.co.kr': '연합인포맥스',
-                                'ohmynews.com' : '오마이뉴스',
-                                'news.tf.co.kr': '더팩트', 'ichannela.com': '채널A',
-                                'pressian.com': '프레시안', 'bizwatch.co.kr': '비즈워치',
-                                'yonhapnewstv.co.kr': '연합뉴스TV', 'mbiz.heraldcorp.com': '헤럴드경제',
-                                'newsis.com': '뉴시스'
-                            
-                            }
-                            
-                            for key, value in domain_map.items():
+                            for key, value in COMMON_DOMAIN_MAP.items():
                                 # 정확한 매칭 또는 서브도메인 매칭
                                 if (normalized_domain == key or 
                                     normalized_domain.endswith('.' + key)):

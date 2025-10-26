@@ -59,24 +59,43 @@ class TeleNewsBot:
         logger.info(f"키워드 '{keyword}': 기본 키워드 {base_keywords}, base_news_map 키: {list(base_news_map.keys())}")
         
         if " and " in keyword.lower():
-            # AND 연산: 교집합
+            # AND 연산: 교집합 (개선된 버전 - 100개씩 가져온 후 교집합)
             if not base_keywords:
                 logger.warning(f"키워드 '{keyword}': 기본 키워드 없음")
                 return []
             
-            result = base_news_map.get(base_keywords[0], [])
-            logger.info(f"키워드 '{keyword}': AND 연산 시작, 첫 번째 키워드 '{base_keywords[0]}'에서 {len(result)}개 뉴스")
+            # 각 키워드별로 100개씩 뉴스를 가져와서 교집합 계산
+            keyword_news_lists = []
+            for base_kw in base_keywords:
+                # 100개씩 가져오기 (유사뉴스 필터링 전)
+                raw_news = self.news_crawler._search_single_keyword(base_kw, max_count=100)
+                keyword_news_lists.append(raw_news)
+                logger.info(f"키워드 '{keyword}': AND 연산, 키워드 '{base_kw}'에서 {len(raw_news)}개 뉴스 수집")
             
-            for base_kw in base_keywords[1:]:
-                base_news = base_news_map.get(base_kw, [])
-                logger.info(f"키워드 '{keyword}': AND 연산, 키워드 '{base_kw}'에서 {len(base_news)}개 뉴스")
+            # 교집합 계산 (URL 기준)
+            if not keyword_news_lists:
+                logger.warning(f"키워드 '{keyword}': 뉴스 리스트 없음")
+                return []
+            
+            # 첫 번째 키워드의 뉴스로 시작
+            result = keyword_news_lists[0]
+            logger.info(f"키워드 '{keyword}': AND 연산 시작, 첫 번째 키워드에서 {len(result)}개 뉴스")
+            
+            # 나머지 키워드들과 교집합 계산
+            for i, base_news in enumerate(keyword_news_lists[1:], 1):
+                logger.info(f"키워드 '{keyword}': AND 연산, {i+1}번째 키워드에서 {len(base_news)}개 뉴스")
                 # URL 기준으로 교집합 계산
                 result_urls = {news['url'] for news in result}
                 base_urls = {news['url'] for news in base_news}
                 common_urls = result_urls.intersection(base_urls)
                 result = [news for news in result if news['url'] in common_urls]
-                logger.info(f"키워드 '{keyword}': AND 연산 결과 {len(result)}개 뉴스")
-            return result[:15]  # 15개 제한
+                logger.info(f"키워드 '{keyword}': AND 연산 중간 결과 {len(result)}개 뉴스")
+            
+            # 유사뉴스 필터링 적용
+            filtered_result = self.news_crawler.filter_similar_news(result, similarity_threshold=0.55)
+            logger.info(f"키워드 '{keyword}': AND 연산 최종 결과 {len(filtered_result)}개 뉴스 (유사뉴스 필터링 후)")
+            
+            return filtered_result[:15]  # 15개 제한
             
         elif " or " in keyword.lower():
             # OR 연산: 합집합 (비례 배분으로 15개 제한)
@@ -421,7 +440,7 @@ class TeleNewsBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await update.message.reply_text(
-                f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n버튼을 눌러 삭제할 수 있습니다.", 
+                f"📝 <b>등록된 키워드 목록:</b>\n\n{keyword_list}\n\n키워드별 최대 15개 뉴스 전송\n버튼을 눌러 삭제할 수 있습니다.", 
                 parse_mode='HTML',
                 reply_markup=reply_markup
             )

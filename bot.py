@@ -1162,8 +1162,40 @@ class TeleNewsBot:
             for keyword, news_list in all_new_news.items():
                 for news in news_list:
                     self.db.mark_news_sent(user_id, keyword, news['url'], news['title'])
-                # 메시지 캐시 저장 (수동 확인용)
-                self.message_cache[keyword] = message
+                
+                # 개별 키워드별 메시지 생성 및 캐시 저장
+                keyword_message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
+                keyword_message += f"총 {len(news_list)}건\n"
+                keyword_message += "──────────────\n\n"
+                
+                for i, news in enumerate(news_list, 1):
+                    title = news['title']
+                    source = news['source']
+                    date = self._format_date_simple(news['date'])
+                    url = news['url']
+                    similar_count = news.get('similar_count', 1)
+                    
+                    # 뉴스 아이콘 결정
+                    icon = self._get_news_icon(news)
+                    
+                    # 제목 (아이콘 + 제목)
+                    keyword_message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+                    
+                    # 관련뉴스 개수 표시
+                    if icon == '⭐':
+                        if similar_count >= 2:
+                            keyword_message += f" [관련뉴스: {similar_count}건]"
+                    elif similar_count > 1:
+                        keyword_message += f" [관련뉴스: {similar_count}건]"
+                    
+                    keyword_message += "\n\n"
+                    
+                    # 부가 정보
+                    keyword_message += f"<code>{source}, {date}</code>\n"
+                    keyword_message += "──────────────\n\n"
+                
+                # 개별 키워드 메시지 캐시 저장
+                self.message_cache[keyword] = keyword_message
             
             logger.info(f"사용자 {user_id} - 배치 뉴스 전송 성공: {total_new_news}건 ({len(all_new_news)}개 키워드)")
         else:
@@ -1313,8 +1345,38 @@ class TeleNewsBot:
                             # 4. 뉴스 전송
                             await self._send_news_to_user(user_id, keyword, combined_news)
                             
-                            # 5. 메시지 캐시에 저장
-                            self.message_cache[keyword] = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n총 {len(combined_news)}건"
+                            # 5. 메시지 캐시에 저장 (실제 뉴스 내용 포함)
+                            keyword_message = f"📰 <b>새로운 뉴스</b> (키워드: {keyword})\n"
+                            keyword_message += f"총 {len(combined_news)}건\n"
+                            keyword_message += "──────────────\n\n"
+                            
+                            for i, news in enumerate(combined_news, 1):
+                                title = news['title']
+                                source = news['source']
+                                date = self._format_date_simple(news['date'])
+                                url = news['url']
+                                similar_count = news.get('similar_count', 1)
+                                
+                                # 뉴스 아이콘 결정
+                                icon = self._get_news_icon(news)
+                                
+                                # 제목 (아이콘 + 제목)
+                                keyword_message += f"<a href='{url}'><b>{icon} {title}</b></a>"
+                                
+                                # 관련뉴스 개수 표시
+                                if icon == '⭐':
+                                    if similar_count >= 2:
+                                        keyword_message += f" [관련뉴스: {similar_count}건]"
+                                elif similar_count > 1:
+                                    keyword_message += f" [관련뉴스: {similar_count}건]"
+                                
+                                keyword_message += "\n\n"
+                                
+                                # 부가 정보
+                                keyword_message += f"<code>{source}, {date}</code>\n"
+                                keyword_message += "──────────────\n\n"
+                            
+                            self.message_cache[keyword] = keyword_message
                         else:
                             await self.send_message_to_user(user_id, f"📰 '{keyword}' 키워드에 대한 뉴스를 찾을 수 없습니다.")
                             

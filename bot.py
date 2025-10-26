@@ -120,6 +120,9 @@ class TeleNewsBot:
         """봇 시작 명령어"""
         user_id = update.effective_chat.id
         
+        # 사용자 명령어 실행 로그
+        logger.info(f"사용자 {user_id} - /start 명령어 실행")
+        
         # 차단 목록에서 제거 (사용자가 다시 봇을 사용하려고 함)
         self.unblock_user_if_needed(user_id)
         
@@ -146,6 +149,10 @@ class TeleNewsBot:
     async def add_keyword_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """키워드 추가 (콤마로 구분하여 여러 개 동시 입력 가능)"""
         user_id = update.effective_chat.id
+        
+        # 사용자 명령어 실행 로그
+        logger.info(f"사용자 {user_id} - /add 명령어 실행")
+        
         self.unblock_user_if_needed(user_id)
         
         # 인자가 있으면 바로 추가
@@ -274,6 +281,9 @@ class TeleNewsBot:
     async def list_keywords_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """등록된 키워드 목록 (삭제 버튼 포함)"""
         user_id = update.effective_chat.id
+        
+        # 사용자 명령어 실행 로그
+        logger.info(f"사용자 {user_id} - /list 명령어 실행")
         keywords = self.db.get_keywords(user_id)
         
         if not keywords:
@@ -749,15 +759,19 @@ class TeleNewsBot:
         
         # 메인 메뉴 버튼 처리
         if text == "📋 키워드 목록":
+            logger.info(f"사용자 {user_id} - 키워드 목록 버튼 클릭")
             await self.list_keywords_command(update, None)
             return
         elif text == "📰 즉시 뉴스 확인":
+            logger.info(f"사용자 {user_id} - 즉시 뉴스 확인 버튼 클릭")
             await self.check_news_command(update, None)
             return
         elif text == "📊 주가 정보":
+            logger.info(f"사용자 {user_id} - 주가 정보 버튼 클릭")
             await self.stock_info_command(update, None)
             return
         elif text == "🔕 방해금지 설정":
+            logger.info(f"사용자 {user_id} - 방해금지 설정 버튼 클릭")
             await self.set_quiet_command(update, None)
             return
         
@@ -879,6 +893,9 @@ class TeleNewsBot:
         """수동으로 뉴스 확인"""
         user_id = update.effective_chat.id
         
+        # 사용자 명령어 실행 로그
+        logger.info(f"사용자 {user_id} - /check 명령어 실행")
+        
         # 키워드가 있는지 먼저 확인
         keywords = self.db.get_keywords(user_id)
         if not keywords:
@@ -904,6 +921,9 @@ class TeleNewsBot:
     async def stock_info_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """주가 정보 확인"""
         user_id = update.effective_chat.id
+        
+        # 사용자 명령어 실행 로그
+        logger.info(f"사용자 {user_id} - /stock 명령어 실행")
         
         # 로딩 메시지 전송 및 저장
         loading_msg = await update.message.reply_text("📊 주가 정보를 가져오는 중...")

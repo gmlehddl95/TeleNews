@@ -9,6 +9,19 @@ from datetime import datetime, timedelta
 from config import NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 from difflib import SequenceMatcher
 
+def clean_text(text):
+    """HTML 태그를 안전하게 변환하는 함수"""
+    if not text:
+        return ''
+    
+    # HTML 엔티티 디코딩
+    text = html.unescape(text)
+    
+    # HTML 태그를 대괄호로 변환
+    text = text.replace('<', '[').replace('>', ']')
+    
+    return text.strip()
+
 # 로깅 설정
 logger = logging.getLogger(__name__)
 
@@ -300,11 +313,8 @@ class NaverNewsCrawler:
             
             for item in data.get('items', []):
                 try:
-                    title = BeautifulSoup(item.get('title', ''), 'html.parser').get_text()
-                    title = html.unescape(title)
-                    
-                    description = BeautifulSoup(item.get('description', ''), 'html.parser').get_text()
-                    description = html.unescape(description)
+                    title = clean_text(item.get('title', ''))
+                    description = clean_text(item.get('description', ''))
                     
                     link = item.get('link', item.get('originallink', ''))
                     original_link = item.get('originallink', '')
@@ -548,12 +558,9 @@ class NaverNewsCrawler:
             # API 응답 파싱
             for item in data.get('items', []):
                 try:
-                    # HTML 태그 제거 및 엔티티 디코딩
-                    title = BeautifulSoup(item.get('title', ''), 'html.parser').get_text()
-                    title = html.unescape(title)  # &middot; → ·, &hellip; → … 변환
-                    
-                    description = BeautifulSoup(item.get('description', ''), 'html.parser').get_text()
-                    description = html.unescape(description)
+                    # HTML 태그를 대괄호로 변환
+                    title = clean_text(item.get('title', ''))
+                    description = clean_text(item.get('description', ''))
                     link = item.get('link', item.get('originallink', ''))  # 네이버 뉴스 링크 우선
                     original_link = item.get('originallink', '')  # 언론사 정보 추출용
                     pub_date = item.get('pubDate', '')

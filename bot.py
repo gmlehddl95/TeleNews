@@ -54,14 +54,21 @@ class TeleNewsBot:
         return unique_news
     
     def get_unique_base_keywords(self, user_keywords):
-        """고유한 기본 키워드만 추출"""
+        """고유한 기본 키워드만 추출 (AND 연산 키워드 제외)"""
         base_keywords = set()
         keyword_mapping = {}  # 원본 키워드 → 기본 키워드들
         
         for user_id, keyword in user_keywords:
             normalized = self.normalize_keyword(keyword)
-            base_keywords.update(normalized)
             keyword_mapping[keyword] = normalized
+            
+            # AND 연산 키워드인지 확인
+            if " and " in keyword.lower():
+                # AND 연산 키워드는 기본 키워드 호출에서 제외
+                continue
+            else:
+                # AND 연산이 아닌 경우만 기본 키워드에 추가
+                base_keywords.update(normalized)
         
         return list(base_keywords), keyword_mapping
     
@@ -1075,10 +1082,10 @@ class TeleNewsBot:
             if not user_keywords:
                 return
             
-            # 2. 키워드 분해 및 고유 기본 키워드 추출
+            # 2. 키워드 분해 및 고유 기본 키워드 추출 (AND 연산 키워드 제외)
             unique_base_keywords, keyword_mapping = self.get_unique_base_keywords(user_keywords)
             
-            # 3. 기본 키워드에 대해서만 API 호출
+            # 3. 기본 키워드에 대해서만 API 호출 (AND 연산 키워드 제외)
             base_news_map = {}
             for base_kw in unique_base_keywords:
                 news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
@@ -1646,12 +1653,14 @@ class TeleNewsBot:
                     # 1. 기본 키워드들 추출
                     base_keywords = self.normalize_keyword(keyword)
                     
-                    # 2. 각 기본 키워드의 뉴스 수집
+                    # 2. 각 기본 키워드의 뉴스 수집 (AND 연산 키워드 제외)
                     base_news_map = {}
-                    for base_kw in base_keywords:
-                        news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
-                        base_news_map[base_kw] = news_list
-                        await asyncio.sleep(0.3)  # API 부하 분산
+                    if " and " not in keyword.lower():
+                        # AND 연산이 아닌 경우만 기본 키워드 호출
+                        for base_kw in base_keywords:
+                            news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
+                            base_news_map[base_kw] = news_list
+                            await asyncio.sleep(0.3)  # API 부하 분산
                     
                     # 3. 복합연산 적용
                     combined_news = self.apply_operation(keyword, base_news_map)

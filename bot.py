@@ -1092,11 +1092,16 @@ class TeleNewsBot:
                 base_news_map[base_kw] = news_list
                 await asyncio.sleep(0.3)  # API 부하 분산
             
-            # 4. 사용자별로 그룹화
+            # 4. 사용자별로 그룹화 (키워드 순서 보장)
             from collections import defaultdict
             user_keyword_map = defaultdict(list)  # {user_id: [keyword1, keyword2, ...]}
+            seen_keywords = set()  # 중복 키워드 방지
+            
             for user_id, keyword in user_keywords:
-                user_keyword_map[user_id].append(keyword)
+                # 사용자별로 키워드가 등록된 순서대로 유지
+                if (user_id, keyword) not in seen_keywords:
+                    user_keyword_map[user_id].append(keyword)
+                    seen_keywords.add((user_id, keyword))
             
             # 5. 사용자별로 처리
             for user_id, keywords in user_keyword_map.items():

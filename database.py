@@ -451,10 +451,11 @@ class Database:
             self.ensure_connection()
             cursor = self.conn.cursor()
             cursor.execute('''
-                SELECT DISTINCT k.user_id, k.keyword 
+                SELECT k.user_id, k.keyword 
                 FROM keywords k 
                 LEFT JOIN blocked_users b ON k.user_id = b.user_id 
                 WHERE b.user_id IS NULL
+                ORDER BY k.user_id, k.id
             ''')
             result = cursor.fetchall()
             cursor.close()

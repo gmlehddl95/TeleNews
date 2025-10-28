@@ -1485,12 +1485,9 @@ class TeleNewsBot:
             logger.error(f"추가 뉴스 선택 중 오류: {e}")
             return []
     
-    async def _send_latest_news_message(self, user_id, keyword, base_news_map, manual_check=True):
+    async def _send_latest_news_message(self, user_id, keyword, base_news_map):
         """최신 뉴스 15개로 메시지 생성해서 전송 (이미 본 뉴스 포함)"""
-        # 방해금지 시간 체크 (수동 확인 시에는 무시)
-        if not manual_check and self.is_quiet_time(user_id):
-            logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀 ({keyword})")
-            return
+        # 수동 확인에서만 사용되므로 방해금지 시간 체크 없음
         
         # 기본 키워드들 추출
         base_keywords = self.normalize_keyword(keyword)
@@ -1558,12 +1555,9 @@ class TeleNewsBot:
         else:
             logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 최신 뉴스 전송 실패")
     
-    async def _send_seen_news_message(self, user_id, keyword, base_keywords, manual_check=True):
+    async def _send_seen_news_message(self, user_id, keyword, base_keywords):
         """이미 본 뉴스 15개로 메시지 생성해서 전송"""
-        # 방해금지 시간 체크 (수동 확인 시에는 무시)
-        if not manual_check and self.is_quiet_time(user_id):
-            logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀 ({keyword})")
-            return
+        # 수동 확인에서만 사용되므로 방해금지 시간 체크 없음
         
         try:
             # 기본 키워드들의 뉴스 수집
@@ -1675,7 +1669,7 @@ class TeleNewsBot:
                         await self._send_news_to_user(user_id, keyword, combined_news, manual_check=True)
                     else:
                         # 5. 새로운 뉴스가 없으면 이미 본 뉴스 15개로 메시지 생성해서 전송
-                        await self._send_seen_news_message(user_id, keyword, base_keywords, manual_check=True)
+                        await self._send_seen_news_message(user_id, keyword, base_keywords)
                     
                     # 키워드 간 순서 보장을 위한 딜레이
                     await asyncio.sleep(1.0)

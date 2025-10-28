@@ -1136,10 +1136,10 @@ class TeleNewsBot:
             import traceback
             logger.error(traceback.format_exc())
     
-    async def _send_batch_news_to_user(self, user_id, news_by_keyword):
+    async def _send_batch_news_to_user(self, user_id, news_by_keyword, manual_check=False):
         """사용자별로 통합된 뉴스 메시지 전송 (배치 전송) + 메시지 캐시 저장"""
-        # 방해금지 시간 체크
-        if self.is_quiet_time(user_id):
+        # 방해금지 시간 체크 (수동 확인 시에는 무시)
+        if not manual_check and self.is_quiet_time(user_id):
             logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀")
             return
         
@@ -1295,8 +1295,8 @@ class TeleNewsBot:
     async def _send_news_to_user(self, user_id, keyword, news_list, manual_check=False):
         """특정 사용자에게 뉴스 전송 (키워드별 최적화용)"""
         
-        # 방해금지 시간 체크
-        if self.is_quiet_time(user_id):
+        # 방해금지 시간 체크 (수동 확인 시에는 무시)
+        if not manual_check and self.is_quiet_time(user_id):
             logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀 ({keyword})")
             return
         
@@ -1485,10 +1485,10 @@ class TeleNewsBot:
             logger.error(f"추가 뉴스 선택 중 오류: {e}")
             return []
     
-    async def _send_latest_news_message(self, user_id, keyword, base_news_map):
+    async def _send_latest_news_message(self, user_id, keyword, base_news_map, manual_check=True):
         """최신 뉴스 15개로 메시지 생성해서 전송 (이미 본 뉴스 포함)"""
-        # 방해금지 시간 체크
-        if self.is_quiet_time(user_id):
+        # 방해금지 시간 체크 (수동 확인 시에는 무시)
+        if not manual_check and self.is_quiet_time(user_id):
             logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀 ({keyword})")
             return
         
@@ -1558,10 +1558,10 @@ class TeleNewsBot:
         else:
             logger.warning(f"사용자 {user_id} - 키워드 '{keyword}': 최신 뉴스 전송 실패")
     
-    async def _send_seen_news_message(self, user_id, keyword, base_keywords):
+    async def _send_seen_news_message(self, user_id, keyword, base_keywords, manual_check=True):
         """이미 본 뉴스 15개로 메시지 생성해서 전송"""
-        # 방해금지 시간 체크
-        if self.is_quiet_time(user_id):
+        # 방해금지 시간 체크 (수동 확인 시에는 무시)
+        if not manual_check and self.is_quiet_time(user_id):
             logger.info(f"사용자 {user_id} - 방해금지 시간, 뉴스 알림 건너뜀 ({keyword})")
             return
         
@@ -1675,7 +1675,7 @@ class TeleNewsBot:
                         await self._send_news_to_user(user_id, keyword, combined_news, manual_check=True)
                     else:
                         # 5. 새로운 뉴스가 없으면 이미 본 뉴스 15개로 메시지 생성해서 전송
-                        await self._send_seen_news_message(user_id, keyword, base_keywords)
+                        await self._send_seen_news_message(user_id, keyword, base_keywords, manual_check=True)
                     
                     # 키워드 간 순서 보장을 위한 딜레이
                     await asyncio.sleep(1.0)

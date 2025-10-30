@@ -193,7 +193,7 @@ class TeleNewsBot:
                     logger.info(f"✅ 메시지 응답 성공 ({attempt + 1}번째 시도)")
                 
                 # 성공 시 짧은 딜레이
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.5)
                 return
                 
             except Exception as e:
@@ -1090,7 +1090,7 @@ class TeleNewsBot:
             for base_kw in unique_base_keywords:
                 news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
                 base_news_map[base_kw] = news_list
-                await asyncio.sleep(0.3)  # API 부하 분산
+                await asyncio.sleep(0.5)  # API 부하 분산
             
             # 4. 사용자별로 그룹화 (키워드 순서 보장)
             from collections import defaultdict
@@ -1574,7 +1574,7 @@ class TeleNewsBot:
             for base_kw in base_keywords:
                 news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=50)  # 더 많이 가져오기
                 all_news.extend(news_list)
-                await asyncio.sleep(0.3)  # API 부하 분산
+                await asyncio.sleep(0.5)  # API 부하 분산
             
             if not all_news:
                 await self.send_message_to_user(user_id, f"📰 '{keyword}' 키워드에 대한 뉴스를 찾을 수 없습니다.")
@@ -1668,7 +1668,7 @@ class TeleNewsBot:
                         for base_kw in base_keywords:
                             news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
                             base_news_map[base_kw] = news_list
-                            await asyncio.sleep(0.3)  # API 부하 분산
+                            await asyncio.sleep(0.5)  # API 부하 분산
                     
                     # 3. 복합연산 적용
                     combined_news = self.apply_operation(keyword, base_news_map)

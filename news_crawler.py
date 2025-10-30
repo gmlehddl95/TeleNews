@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 import time
@@ -78,6 +80,47 @@ class NaverNewsCrawler:
         self.client_id = NAVER_CLIENT_ID
         self.client_secret = NAVER_CLIENT_SECRET
         self.api_url = "https://openapi.naver.com/v1/search/news.json"
+        # 안정성 강화를 위한 세션/재시도 설정
+        self.session = requests.Session()
+        retry = Retry(
+            total=4,
+            connect=4,
+            read=4,
+            backoff_factor=0.6,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"],
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry, pool_connections=20, pool_maxsize=20)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+        self._consecutive_failures = 0
+
+    def _safe_get(self, url, *, headers=None, params=None, timeout=(10, 20)):
+        """세션으로 GET 요청을 안전하게 수행 (재시도 + 세션 리셋)"""
+        try:
+            resp = self.session.get(url, headers=headers, params=params, timeout=timeout)
+            # 성공 시 실패 카운트 초기화
+            self._consecutive_failures = 0
+            return resp
+        except requests.exceptions.RequestException as e:
+            self._consecutive_failures += 1
+            # 연속 실패가 많아지면 세션 리셋 (고착 상태 해제)
+            if self._consecutive_failures >= 6:
+                try:
+                    self.session.close()
+                except Exception:
+                    pass
+                self.session = requests.Session()
+                adapter = HTTPAdapter(max_retries=Retry(
+                    total=4, connect=4, read=4, backoff_factor=0.6,
+                    status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"],
+                    raise_on_status=False,
+                ), pool_connections=20, pool_maxsize=20)
+                self.session.mount("https://", adapter)
+                self.session.mount("http://", adapter)
+                self._consecutive_failures = 0
+            raise
     
     def parse_keyword_expression(self, keyword):
         """
@@ -353,7 +396,7 @@ class NaverNewsCrawler:
                 'sort': 'sim'
             }
             
-            response = requests.get(self.api_url, headers=headers, params=params, timeout=8)
+            response = self._safe_get(self.api_url, headers=headers, params=params, timeout=(10, 20))
             response.raise_for_status()
             
             data = response.json()
@@ -586,7 +629,7 @@ class NaverNewsCrawler:
             else:
                 logger.debug(f"네이버 API 검색: {keyword}")
             
-            response = requests.get(self.api_url, headers=headers, params=params, timeout=8)
+            response = self._safe_get(self.api_url, headers=headers, params=params, timeout=(10, 20))
             response.raise_for_status()
             
             data = response.json()

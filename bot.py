@@ -1082,17 +1082,10 @@ class TeleNewsBot:
             if not user_keywords:
                 return
             
-            # 2. 키워드 분해 및 고유 기본 키워드 추출 (AND 연산 키워드 제외)
-            unique_base_keywords, keyword_mapping = self.get_unique_base_keywords(user_keywords)
+            # 2. 방해금지 시간이 아닌 사용자만 필터링 (API 호출 전 체크)
+            active_user_keywords = []
+            quiet_user_ids = set()
             
-            # 3. 기본 키워드에 대해서만 API 호출 (AND 연산 키워드 제외)
-            base_news_map = {}
-            for base_kw in unique_base_keywords:
-                news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
-                base_news_map[base_kw] = news_list
-                await asyncio.sleep(0.5)  # API 부하 분산
-            
-            # 4. 사용자별로 그룹화 (키워드 순서 보장)
             from collections import defaultdict
             user_keyword_map = defaultdict(list)  # {user_id: [keyword1, keyword2, ...]}
             seen_keywords = set()  # 중복 키워드 방지
@@ -1103,16 +1096,40 @@ class TeleNewsBot:
                     user_keyword_map[user_id].append(keyword)
                     seen_keywords.add((user_id, keyword))
             
-            # 5. 사용자별로 처리
+            # 방해금지 시간 체크 (API 호출 전)
             for user_id, keywords in user_keyword_map.items():
+                if self.is_quiet_time(user_id):
+                    # 방해금지 시간에 건너뛴 키워드들 로그 기록
+                    keyword_list = ", ".join(keywords)
+                    logger.info(f"사용자 {user_id} - 방해금지 시간, 키워드 건너뜀: [{keyword_list}]")
+                    quiet_user_ids.add(user_id)
+                else:
+                    # 방해금지 시간이 아닌 사용자의 키워드만 추가
+                    for keyword in keywords:
+                        active_user_keywords.append((user_id, keyword))
+            
+            # 방해금지 시간이 아닌 사용자가 없으면 API 호출 불필요
+            if not active_user_keywords:
+                logger.info("방해금지 시간이 아닌 사용자가 없어 API 호출을 건너뜁니다.")
+                return
+            
+            # 3. 필터링된 사용자의 키워드에서 고유 기본 키워드 추출 (AND 연산 키워드 제외)
+            unique_base_keywords, keyword_mapping = self.get_unique_base_keywords(active_user_keywords)
+            
+            # 4. 기본 키워드에 대해서만 API 호출 (AND 연산 키워드 제외)
+            base_news_map = {}
+            for base_kw in unique_base_keywords:
+                news_list = self.news_crawler.get_latest_news(base_kw, last_check_count=15)
+                base_news_map[base_kw] = news_list
+                await asyncio.sleep(0.5)  # API 부하 분산
+            
+            # 5. 방해금지 시간이 아닌 사용자별로 처리
+            for user_id, keywords in user_keyword_map.items():
+                # 이미 방해금지 체크 완료했으므로 방해금지 사용자는 건너뜀
+                if user_id in quiet_user_ids:
+                    continue
+                
                 try:
-                    # 방해금지 시간 체크
-                    if self.is_quiet_time(user_id):
-                        # 방해금지 시간에 건너뛴 키워드들 로그 기록
-                        keyword_list = ", ".join(keywords)
-                        logger.info(f"사용자 {user_id} - 방해금지 시간, 키워드 건너뜀: [{keyword_list}]")
-                        continue
-                    
                     # 사용자의 모든 키워드에 대한 뉴스 수집 (복합연산 적용)
                     # 키워드 순서 보장을 위해 순차적으로 처리
                     for keyword in keywords:
@@ -1125,6 +1142,7 @@ class TeleNewsBot:
                                 news['_keyword'] = keyword
                             
                             # 개별 키워드별로 뉴스 전송 (자동 알림)
+                            # 이미 방해금지 체크 완료했으므로 manual_check=False로 전송
                             await self._send_news_to_user(user_id, keyword, combined_news, manual_check=False)
                             
                             # 키워드 간 순서 보장을 위한 딜레이

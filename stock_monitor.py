@@ -124,6 +124,169 @@ class StockMonitor:
         
         return None
     
+    def get_previous_day_low(self, retry_count=3, timeout=15):
+        """
+        전날 장중 최저가 및 전고점 대비 정보 조회 (분봉 데이터 사용)
+        :param retry_count: 재시도 횟수
+        :param timeout: 최대 대기 시간 (초)
+        :return: dict with low_price, low_time, all_time_high, drop_percentage, etc.
+        """
+        # Rate limiting 체크
+        elapsed = time.time() - self.last_nasdaq_call
+        if elapsed < self.min_interval:
+            wait_time = self.min_interval - elapsed
+            print(f"[DEBUG] Rate limiting: {wait_time:.1f}초 대기 중...")
+            time.sleep(wait_time)
+        
+        for attempt in range(retry_count):
+            try:
+                print(f"[DEBUG] 전날 나스닥 100 장중 최저가 조회 시도 {attempt + 1}/{retry_count}...")
+                
+                # 재시도 시 더 긴 딜레이
+                if attempt > 0:
+                    time.sleep(5)
+                
+                # Ticker 객체 사용
+                nasdaq = yf.Ticker(self.nasdaq_ticker)
+                
+                # 전날 일봉 데이터로 전고점 확인
+                def fetch_daily_history():
+                    return nasdaq.history(period="2y", interval="1d", auto_adjust=True)
+                
+                # 전날 분봉 데이터로 최저가 및 시간 확인
+                def fetch_intraday_history():
+                    # 전날 데이터만 가져오기 (period="1d"는 최근 거래일)
+                    return nasdaq.history(period="1d", interval="5m", auto_adjust=True)
+                
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    # 일봉 데이터로 전고점 확인
+                    future_daily = executor.submit(fetch_daily_history)
+                    try:
+                        hist_daily = future_daily.result(timeout=timeout)
+                    except FutureTimeoutError:
+                        print(f"[WARNING] yfinance API 타임아웃 ({timeout}초 초과)")
+                        if attempt < retry_count - 1:
+                            continue
+                        return None
+                    
+                    # 분봉 데이터로 최저가 및 시간 확인
+                    future_intraday = executor.submit(fetch_intraday_history)
+                    try:
+                        hist_intraday = future_intraday.result(timeout=timeout)
+                    except FutureTimeoutError:
+                        print(f"[WARNING] 분봉 데이터 조회 타임아웃")
+                        # 분봉 데이터 실패 시 일봉 데이터의 Low 사용
+                        hist_intraday = None
+                
+                self.last_nasdaq_call = time.time()
+                
+                if hist_daily.empty:
+                    print(f"[DEBUG] 일봉 데이터가 비어있습니다.")
+                    if attempt < retry_count - 1:
+                        time.sleep(2)
+                        continue
+                    return None
+                
+                # 전고점 계산 (일봉 데이터 기준)
+                all_time_high = float(hist_daily['High'].max())
+                ath_date = hist_daily['High'].idxmax()
+                
+                # 전날 장중 최저가 및 시간
+                from datetime import timezone, timedelta
+                kst = timezone(timedelta(hours=9))
+                
+                if hist_intraday is not None and not hist_intraday.empty:
+                    # 분봉 데이터에서 최저가 및 시간 찾기
+                    low_price = float(hist_intraday['Low'].min())
+                    low_time_idx = hist_intraday['Low'].idxmin()
+                    
+                    # pandas Timestamp를 datetime으로 변환 및 타임존 처리
+                    from datetime import timezone as dt_timezone
+                    
+                    # pandas Timestamp를 Python datetime으로 변환
+                    if isinstance(low_time_idx, pd.Timestamp):
+                        # naive datetime이면 UTC로 가정 (yfinance는 보통 UTC)
+                        if low_time_idx.tz is None:
+                            # UTC로 가정하고 KST로 변환
+                            low_time_utc = low_time_idx.to_pydatetime().replace(tzinfo=dt_timezone.utc)
+                        else:
+                            low_time_utc = low_time_idx.to_pydatetime()
+                    else:
+                        # 이미 datetime 객체
+                        if low_time_idx.tzinfo is None:
+                            low_time_utc = low_time_idx.replace(tzinfo=dt_timezone.utc)
+                        else:
+                            low_time_utc = low_time_idx
+                    
+                    # KST로 변환
+                    low_time_kst = low_time_utc.astimezone(kst)
+                    
+                    low_time_str = low_time_kst.strftime('%Y-%m-%d %H:%M KST')
+                    print(f"[DEBUG] 전날 장중 최저가: ${low_price:,.2f} ({low_time_str})")
+                else:
+                    # 분봉 데이터 실패 시 일봉 데이터의 Low 사용
+                    last_day = hist_daily.iloc[-1]
+                    low_price = float(last_day['Low'])
+                    low_time = hist_daily.index[-1]
+                    
+                    # pandas Timestamp를 datetime으로 변환 및 타임존 처리
+                    from datetime import timezone as dt_timezone
+                    
+                    # pandas Timestamp를 Python datetime으로 변환
+                    if isinstance(low_time, pd.Timestamp):
+                        # naive datetime이면 UTC로 가정 (yfinance는 보통 UTC)
+                        if low_time.tz is None:
+                            low_time_utc = low_time.to_pydatetime().replace(tzinfo=dt_timezone.utc)
+                        else:
+                            low_time_utc = low_time.to_pydatetime()
+                    else:
+                        # 이미 datetime 객체
+                        if low_time.tzinfo is None:
+                            low_time_utc = low_time.replace(tzinfo=dt_timezone.utc)
+                        else:
+                            low_time_utc = low_time
+                    
+                    # KST로 변환
+                    low_time_kst = low_time_utc.astimezone(kst)
+                    
+                    low_time_str = low_time_kst.strftime('%Y-%m-%d %H:%M KST')
+                    print(f"[DEBUG] 전날 장중 최저가 (일봉 기준): ${low_price:,.2f} ({low_time_str})")
+                
+                # 전고점 대비 하락률 계산
+                percentage = (low_price / all_time_high) * 100
+                drop_percentage = 100 - percentage
+                
+                print(f"[DEBUG] 전고점: ${all_time_high:,.2f} ({ath_date}), 전날 최저가: ${low_price:,.2f}, 하락률: {drop_percentage:.2f}%")
+                
+                # 조회 시간 포함
+                from datetime import timezone, timedelta
+                kst = timezone(timedelta(hours=9))
+                query_time = datetime.now(kst)
+                
+                result = {
+                    'low_price': round(low_price, 2),
+                    'low_time': low_time_kst,
+                    'low_time_str': low_time_str,
+                    'all_time_high': round(all_time_high, 2),
+                    'ath_date': ath_date,
+                    'percentage': round(percentage, 2),
+                    'drop_percentage': round(drop_percentage, 2),
+                    'query_time': query_time
+                }
+                
+                return result
+                
+            except Exception as e:
+                print(f"❌ 전날 나스닥 100 정보 조회 오류 (시도 {attempt + 1}): {e}")
+                if attempt < retry_count - 1:
+                    time.sleep(2)
+                else:
+                    import traceback
+                    traceback.print_exc()
+                    return None
+        
+        return None
+    
     def get_tqqq_info(self, retry_count=3, timeout=10):
         """
         TQQQ 현재 가격 조회 (캐싱 지원)

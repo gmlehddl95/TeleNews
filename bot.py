@@ -360,7 +360,7 @@ class TeleNewsBot:
             input_msg = await update.message.reply_text(
                 "📝 <b>추가할 키워드를 입력해주세요</b>\n\n"
                 "🔹 <b>단순 키워드</b>\n"
-                "예시: 삼성전자, AI, 나스닥\n"
+                "예시: 단독, 속보, 삼성전자, AI, 나스닥\n"
                 "💡 콤마(,)로 구분하여 여러 개 동시 입력 가능\n\n"
                 "🔹 <b>논리 연산 (AND/OR)</b>\n"
                 "• <code>삼성 and 애플</code> - 삼성과 애플 모두 관련된 기사\n"

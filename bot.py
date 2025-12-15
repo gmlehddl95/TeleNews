@@ -239,7 +239,7 @@ class TeleNewsBot:
         
         # 인증 여부 확인
         if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
-            await self.safe_reply(update.message, "🔒 <b>비밀번호를 입력해주세요.</b>\n\n봇 사용을 위해 관리자가 설정한 비밀번호가 필요합니다.", parse_mode='HTML')
+            await self.safe_reply(update.message, "🔒 <b>비밀번호를 입력해주세요.</b>\n\n봇 사용을 위해 관리자가 설정한 비밀번호가 필요합니다.\n\n문의: gmlehddl95@gmail.com", parse_mode='HTML')
             return
             
         # 차단 목록에서 제거 (사용자가 다시 봇을 사용하려고 함)
@@ -273,7 +273,7 @@ class TeleNewsBot:
         logger.info(f"사용자 {user_id} - /add 명령어 실행")
         
         if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
-            await update.message.reply_text("🔒 비밀번호를 먼저 입력해주세요.")
+            await update.message.reply_text("🔒 <b>비밀번호를 입력해주세요.</b>\n\n봇 사용을 위해 관리자가 설정한 비밀번호가 필요합니다.")
             return
 
         self.unblock_user_if_needed(user_id)
@@ -906,7 +906,7 @@ class TeleNewsBot:
                 await self.safe_reply(update.message, "✅ <b>인증되었습니다! 환영합니다.</b>", parse_mode='HTML')
                 await self.start_command(update, context)
             else:
-                await self.safe_reply(update.message, "🚫 <b>비밀번호가 틀렸습니다.</b>\n다시 입력해주세요.", parse_mode='HTML')
+                await self.safe_reply(update.message, "🚫 <b>비밀번호가 틀렸습니다.</b>\n\n다시 입력해주세요.\n문의: gmlehddl95@gmail.com", parse_mode='HTML')
             return
         
         # 메인 메뉴 버튼 처리

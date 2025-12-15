@@ -24,3 +24,6 @@ DATABASE_URL = os.getenv('DATABASE_URL', '')
 # 로깅 설정
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()  # DEBUG, INFO, WARNING, ERROR
 
+# 봇 비밀번호
+BOT_PASSWORD = os.getenv('BOT_PASSWORD', '')
+

@@ -132,6 +132,22 @@ class Database:
             )
         ''')
         
+        # 승인된 사용자 테이블
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS authorized_users (
+                user_id BIGINT PRIMARY KEY,
+                authorized_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # 기존 사용자 자동 승인 (마이그레이션)
+        # 키워드가 하나라도 등록된 사용자는 자동으로 승인 처리
+        cursor.execute('''
+            INSERT INTO authorized_users (user_id)
+            SELECT DISTINCT user_id FROM keywords
+            ON CONFLICT (user_id) DO NOTHING
+        ''')
+        
         self.conn.commit()
     
     def add_keyword(self, user_id, keyword):
@@ -497,6 +513,37 @@ class Database:
         except Exception as e:
             logger.error(f"직전 메시지 조회 실패: {e}")
             return None
+    
+    def is_user_authorized(self, user_id):
+        """사용자 승인 여부 확인"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('SELECT user_id FROM authorized_users WHERE user_id = %s', (user_id,))
+            result = cursor.fetchone()
+            cursor.close()
+            return result is not None
+        except Exception as e:
+            logger.error(f"사용자 승인 여부 확인 실패: {e}")
+            # DB 오류 시 안전을 위해 승인되지 않은 것으로 처리
+            return False
+            
+    def authorize_user(self, user_id):
+        """사용자 승인 처리"""
+        try:
+            self.ensure_connection()
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                INSERT INTO authorized_users (user_id) 
+                VALUES (%s) 
+                ON CONFLICT (user_id) DO NOTHING
+            ''', (user_id,))
+            self.conn.commit()
+            cursor.close()
+            return True
+        except Exception as e:
+            logger.error(f"사용자 승인 처리 실패: {e}")
+            return False
     
     def close(self):
         """데이터베이스 연결 종료"""

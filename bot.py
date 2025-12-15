@@ -7,7 +7,7 @@ from telegram.request import HTTPXRequest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, NEWS_CHECK_INTERVAL, STOCK_ALERT_TIMES, LOG_LEVEL
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, NEWS_CHECK_INTERVAL, STOCK_ALERT_TIMES, LOG_LEVEL, BOT_PASSWORD
 from database import Database
 from news_crawler import NaverNewsCrawler
 from stock_monitor import StockMonitor
@@ -237,6 +237,11 @@ class TeleNewsBot:
         # 사용자 명령어 실행 로그
         logger.info(f"사용자 {user_id} - /start 명령어 실행")
         
+        # 인증 여부 확인
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await self.safe_reply(update.message, "🔒 <b>비밀번호를 입력해주세요.</b>\n\n봇 사용을 위해 관리자가 설정한 비밀번호가 필요합니다.", parse_mode='HTML')
+            return
+            
         # 차단 목록에서 제거 (사용자가 다시 봇을 사용하려고 함)
         self.unblock_user_if_needed(user_id)
         
@@ -267,6 +272,10 @@ class TeleNewsBot:
         # 사용자 명령어 실행 로그
         logger.info(f"사용자 {user_id} - /add 명령어 실행")
         
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await update.message.reply_text("🔒 비밀번호를 먼저 입력해주세요.")
+            return
+
         self.unblock_user_if_needed(user_id)
         
         # 인자가 있으면 바로 추가
@@ -385,6 +394,10 @@ class TeleNewsBot:
         user_id = update.effective_chat.id
         keyword = ' '.join(context.args)
         
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await update.message.reply_text("🔒 비밀번호를 먼저 입력해주세요.")
+            return
+            
         if self.db.remove_keyword(user_id, keyword):
             await update.message.reply_text(f"✅ 키워드 '{keyword}'가 제거되었습니다.")
             logger.info(f"사용자 {user_id} - 키워드 제거됨: {keyword}")
@@ -397,6 +410,10 @@ class TeleNewsBot:
         
         # 사용자 명령어 실행 로그
         logger.info(f"사용자 {user_id} - /list 명령어 실행")
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await update.message.reply_text("🔒 비밀번호를 먼저 입력해주세요.")
+            return
+            
         keywords = self.db.get_keywords(user_id)
         
         if not keywords:
@@ -436,6 +453,10 @@ class TeleNewsBot:
     async def remove_all_keywords_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """모든 키워드 제거"""
         user_id = update.effective_chat.id
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await update.message.reply_text("🔒 비밀번호를 먼저 입력해주세요.")
+            return
+            
         deleted_count = self.db.remove_all_keywords(user_id)
         
         if deleted_count > 0:
@@ -447,6 +468,10 @@ class TeleNewsBot:
     async def set_quiet_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """방해금지 시간 설정 (버튼 UI)"""
         user_id = update.effective_chat.id
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await update.message.reply_text("🔒 비밀번호를 먼저 입력해주세요.")
+            return
+            
         quiet_hours = self.db.get_quiet_hours(user_id)
         
         from datetime import datetime, timezone, timedelta
@@ -541,6 +566,10 @@ class TeleNewsBot:
         
         user_id = query.from_user.id
         data = query.data
+        
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await query.edit_message_text("🔒 비밀번호를 먼저 입력해주세요.")
+            return
         
         if data == "removeall":
             # 모두 삭제 - 애니메이션 효과
@@ -864,10 +893,20 @@ class TeleNewsBot:
                 reply_markup=reply_markup
             )
     
-    async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """일반 텍스트 메시지 처리 (대화형 키워드 입력 + 버튼 클릭)"""
         user_id = update.effective_chat.id
         text = update.message.text
+        
+        # 인증 여부 확인
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            # 비밀번호 확인
+            if text.strip() == BOT_PASSWORD:
+                self.db.authorize_user(user_id)
+                await self.safe_reply(update.message, "✅ <b>인증되었습니다! 환영합니다.</b>", parse_mode='HTML')
+                await self.start_command(update, context)
+            else:
+                await self.safe_reply(update.message, "🚫 <b>비밀번호가 틀렸습니다.</b>\n다시 입력해주세요.", parse_mode='HTML')
+            return
         
         # 메인 메뉴 버튼 처리
         if text == "📋 키워드 목록":
@@ -1005,6 +1044,10 @@ class TeleNewsBot:
         """수동으로 뉴스 확인"""
         user_id = update.effective_chat.id
         
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await update.message.reply_text("🔒 비밀번호를 먼저 입력해주세요.")
+            return
+        
         # 사용자 명령어 실행 로그
         logger.info(f"사용자 {user_id} - /check 명령어 실행")
         
@@ -1033,6 +1076,10 @@ class TeleNewsBot:
     async def stock_info_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """주가 정보 확인"""
         user_id = update.effective_chat.id
+        
+        if BOT_PASSWORD and not self.db.is_user_authorized(user_id):
+            await update.message.reply_text("🔒 비밀번호를 먼저 입력해주세요.")
+            return
         
         # 사용자 명령어 실행 로그
         logger.info(f"사용자 {user_id} - /stock 명령어 실행")

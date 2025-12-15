@@ -893,6 +893,7 @@ class TeleNewsBot:
                 reply_markup=reply_markup
             )
     
+    async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """일반 텍스트 메시지 처리 (대화형 키워드 입력 + 버튼 클릭)"""
         user_id = update.effective_chat.id
         text = update.message.text
